@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <radialGradient id="platoBg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#2a1200"/>
+      <stop offset="100%" style="stop-color:#0f0800"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#platoBg)"/>
+  <!-- Plato -->
+  <ellipse cx="200" cy="220" rx="160" ry="30" fill="#1a0a00" opacity="0.5"/>
+  <ellipse cx="200" cy="195" rx="155" ry="155" fill="#2a1400"/>
+  <ellipse cx="200" cy="195" rx="145" ry="145" fill="#3d1f00" stroke="#5c2d00" stroke-width="2"/>
+  <!-- Salteña principal -->
+  <ellipse cx="200" cy="180" rx="100" ry="46" fill="#c97a25"/>
+  <ellipse cx="200" cy="155" rx="92" ry="55" fill="#e8962e"/>
+  <path d="M 108 155 Q 200 75 292 155" fill="#d4821e" stroke="#c07018" stroke-width="2"/>
+  <path d="M 112 155 Q 132 140 152 155 Q 172 140 192 155 Q 212 140 232 155 Q 252 140 272 155 Q 288 140 288 155" fill="none" stroke="#a06010" stroke-width="2.5"/>
+  <ellipse cx="168" cy="125" rx="28" ry="10" fill="rgba(255,220,100,0.22)" transform="rotate(-10,168,125)"/>
+
+  <!-- Texto del producto -->
+  <text x="200" y="330" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-weight="bold" fill="#f59e0b">Salteña</text>
+  <text x="200" y="358" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="rgba(232,150,46,0.8)">Carne · Pollo</text>
+  <text x="200" y="50" text-anchor="middle" font-size="42">🥟</text>
+  <text x="200" y="85" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="rgba(245,158,11,0.7)">Receta Tradicional</text>
+</svg>

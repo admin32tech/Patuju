@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <rect width="400" height="400" fill="#0f1a10"/>
+  <ellipse cx="200" cy="210" rx="165" ry="30" fill="rgba(0,0,0,0.4)"/>
+  <!-- Plato / bandeja con tucumanas -->
+  <ellipse cx="200" cy="195" rx="155" ry="155" fill="#2a1400"/>
+  <ellipse cx="200" cy="195" rx="145" ry="145" fill="#3d1f00" stroke="#5c2d00" stroke-width="2"/>
+
+  <!-- Tucumana: forma triangular redondeada frita -->
+  <!-- Central -->
+  <path d="M 200 90 Q 270 190 130 190 Z" fill="#c8860a" stroke="#a06008" stroke-width="2"/>
+  <path d="M 200 90 Q 270 190 130 190 Z" fill="url(#tucFill)"/>
+  <path d="M 200 90 Q 235 140 235 185" fill="none" stroke="#e8a020" stroke-width="1.5" opacity="0.6"/>
+  <path d="M 200 90 Q 165 140 165 185" fill="none" stroke="#e8a020" stroke-width="1.5" opacity="0.6"/>
+  <!-- Brillo frito -->
+  <ellipse cx="190" cy="135" rx="18" ry="9" fill="rgba(255,220,80,0.28)" transform="rotate(-25,190,135)"/>
+
+  <!-- Izquierda -->
+  <path d="M 120 110 Q 175 195 65 200 Z" fill="#b8760a" stroke="#906000" stroke-width="1.5"/>
+
+  <!-- Derecha -->
+  <path d="M 280 110 Q 225 195 335 200 Z" fill="#b8760a" stroke="#906000" stroke-width="1.5"/>
+
+  <text x="200" y="55" text-anchor="middle" font-size="36">🥟</text>
+  <text x="200" y="340" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-weight="bold" fill="#f59e0b">Tucumana</text>
+  <text x="200" y="368" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="rgba(232,150,46,0.8)">Crujiente · Frita</text>
+</svg>

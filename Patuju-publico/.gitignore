@@ -1,0 +1,14 @@
+# PATUJU POS — Git Ignore
+
+# Variables de entorno — nunca versionar credenciales
+.env
+
+# Directorios de vendor si se usa Composer en el futuro
+vendor/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Logs de PHP
+*.log

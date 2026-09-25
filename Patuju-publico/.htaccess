@@ -1,0 +1,45 @@
+# ============================================
+# PATUJU POS - Configuración Apache
+# ============================================
+
+# Página de inicio por defecto: Landing Page
+DirectoryIndex landing.php index.php
+
+# Prevenir listado de directorios
+Options -Indexes
+
+# Charset por defecto
+AddDefaultCharset UTF-8
+
+# ── Cabeceras de Seguridad HTTP ──────────────
+<IfModule mod_headers.c>
+    # Prevenir clickjacking (iframes maliciosos)
+    Header always set X-Frame-Options "SAMEORIGIN"
+    # Prevenir MIME-type sniffing
+    Header always set X-Content-Type-Options "nosniff"
+    # Activar protección XSS del navegador
+    Header always set X-XSS-Protection "1; mode=block"
+    # Política de referencia
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    # Permisos de funcionalidades del navegador
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+</IfModule>
+
+# ── Proteger directorios sensibles ───────────
+# Bloquear acceso directo a archivos de configuración
+<FilesMatch "\.(sql|md|env|log|bak|ini)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Bloquear acceso al directorio config/
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^config/ - [F,L]
+    RewriteRule ^database/ - [F,L]
+</IfModule>

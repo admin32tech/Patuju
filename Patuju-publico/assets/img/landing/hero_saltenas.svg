@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a0a00"/>
+      <stop offset="100%" style="stop-color:#3d1a00"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:0"/>
+    </radialGradient>
+  </defs>
+  <!-- Fondo -->
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <ellipse cx="400" cy="300" rx="350" ry="250" fill="url(#glow)"/>
+
+  <!-- Mesa de madera -->
+  <rect x="0" y="400" width="800" height="200" rx="0" fill="#3d1f00"/>
+  <rect x="0" y="395" width="800" height="20" rx="5" fill="#5c2d00"/>
+
+  <!-- Salteña grande central -->
+  <ellipse cx="400" cy="370" rx="130" ry="55" fill="#c97a25"/>
+  <ellipse cx="400" cy="345" rx="120" ry="60" fill="#e8962e"/>
+  <path d="M 285 345 Q 400 260 515 345" fill="#d4821e" stroke="#c07018" stroke-width="2"/>
+  <!-- Trenzado de la salteña -->
+  <path d="M 290 345 Q 310 330 330 345 Q 350 330 370 345 Q 390 330 410 345 Q 430 330 450 345 Q 470 330 490 345 Q 510 330 510 345" fill="none" stroke="#a06010" stroke-width="3"/>
+  <!-- Brillo -->
+  <ellipse cx="360" cy="315" rx="40" ry="15" fill="rgba(255,220,100,0.25)" transform="rotate(-10,360,315)"/>
+
+  <!-- Salteña izquierda -->
+  <ellipse cx="220" cy="395" rx="90" ry="38" fill="#c07018"/>
+  <ellipse cx="220" cy="375" rx="85" ry="42" fill="#d4821e"/>
+  <path d="M 138 375 Q 220 310 302 375" fill="#c07018" stroke="#a06010" stroke-width="1.5"/>
+
+  <!-- Salteña derecha -->
+  <ellipse cx="580" cy="395" rx="90" ry="38" fill="#c07018"/>
+  <ellipse cx="580" cy="375" rx="85" ry="42" fill="#d4821e"/>
+  <path d="M 498 375 Q 580 310 662 375" fill="#c07018" stroke="#a06010" stroke-width="1.5"/>
+
+  <!-- Vapor -->
+  <path d="M 360 255 Q 350 230 360 210 Q 370 190 360 170" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="3" stroke-linecap="round"/>
+  <path d="M 400 248 Q 390 223 400 203 Q 410 183 400 163" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="3" stroke-linecap="round"/>
+  <path d="M 440 255 Q 430 230 440 210 Q 450 190 440 170" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Texto PATUJU -->
+  <text x="400" y="120" text-anchor="middle" font-family="Georgia, serif" font-size="52" font-weight="bold" fill="#f59e0b" opacity="0.9">🥟 PATUJU</text>
+  <text x="400" y="160" text-anchor="middle" font-family="Georgia, serif" font-size="22" fill="#e8962e" opacity="0.85">La Mejor Salteña de Bolivia</text>
+  <text x="400" y="190" text-anchor="middle" font-family="Georgia, serif" font-size="15" fill="rgba(255,200,100,0.7)">Tradición desde 1995</text>
+</svg>
