@@ -63,7 +63,14 @@ const Encargado = (() => {
 
         try {
             const res = await fetch('ajax/stock.php?resumen_sucursales=1');
-            const data = await res.json();
+            const text = await res.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (parseErr) {
+                console.error('El servidor devolvió una respuesta no válida (no JSON):', text);
+                throw new Error('Respuesta inválida del servidor (posible error PHP). Revisa la consola de red.');
+            }
 
             if (data.success) {
                 sucursalesLista = data.sucursales || [];
@@ -79,7 +86,7 @@ const Encargado = (() => {
         } catch (err) {
             console.error('Error cargando resumen de sucursales:', err);
             if (container) {
-                container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--color-danger); padding: 3rem;">Error de conexión con el servidor</div>';
+                container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--color-danger); padding: 3rem;">${escapeHtml(err.message || 'Error de conexión con el servidor')}</div>`;
             }
         }
     }

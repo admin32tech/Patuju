@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 COALESCE(stk.stock_bajo_count, 0) AS stock_bajo_count,
                 COALESCE(stk.stock_agotado_count, 0) AS stock_agotado_count,
                 COALESCE(t.turno_estado, 'cerrado') AS turno_estado,
-                t.turno_cajero,
+                COALESCE(t.turno_cajero, '') AS turno_cajero,
                 COALESCE(v_hoy.total_ventas, 0.00) AS ventas_hoy,
                 COALESCE(v_hoy.count_ventas, 0) AS num_ventas_hoy
             FROM sucursales s
@@ -88,98 +88,112 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 GROUP BY sucursal_id
             ) v_hoy ON v_hoy.sucursal_id = s.id
             WHERE s.activo = 1 {$whereSuc}
-            GROUP BY s.id
             ORDER BY s.id ASC
         ";
 
-        $stmtResumen = $db->prepare($sqlResumen);
-        $stmtResumen->execute($paramsSuc);
-        jsonResponse([
-            'success' => true,
-            'sucursal_sesion_id' => $sucSesion,
-            'fecha_actual' => date('d/m/Y'),
-            'sucursales' => $stmtResumen->fetchAll()
-        ]);
+        try {
+            $stmtResumen = $db->prepare($sqlResumen);
+            $stmtResumen->execute($paramsSuc);
+            jsonResponse([
+                'success' => true,
+                'sucursal_sesion_id' => $sucSesion,
+                'fecha_actual' => date('d/m/Y'),
+                'sucursales' => $stmtResumen->fetchAll()
+            ]);
+        } catch (PDOException $e) {
+            jsonResponse([
+                'success' => false,
+                'error' => 'Error al cargar resumen de sucursales: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     // Historial de movimientos
     if (isset($_GET['movimientos'])) {
-        if ($sucId) {
-            $stmtMov = $db->prepare("
-                SELECT sm.*, p.nombre AS producto_nombre, u.nombre_display AS usuario_nombre, s.nombre AS sucursal_nombre
-                FROM stock_movimientos sm
-                JOIN productos p ON p.id = sm.producto_id
-                JOIN usuarios u ON u.id = sm.usuario_id
-                JOIN sucursales s ON s.id = sm.sucursal_id
-                WHERE sm.sucursal_id = ?
-                ORDER BY sm.created_at DESC
-                LIMIT 50
-            ");
-            $stmtMov->execute([$sucId]);
-        } else {
-            $stmtMov = $db->prepare("
-                SELECT sm.*, p.nombre AS producto_nombre, u.nombre_display AS usuario_nombre, s.nombre AS sucursal_nombre
-                FROM stock_movimientos sm
-                JOIN productos p ON p.id = sm.producto_id
-                JOIN usuarios u ON u.id = sm.usuario_id
-                JOIN sucursales s ON s.id = sm.sucursal_id
-                ORDER BY sm.created_at DESC
-                LIMIT 50
-            ");
-            $stmtMov->execute();
+        try {
+            if ($sucId) {
+                $stmtMov = $db->prepare("
+                    SELECT sm.*, p.nombre AS producto_nombre, u.nombre_display AS usuario_nombre, s.nombre AS sucursal_nombre
+                    FROM stock_movimientos sm
+                    JOIN productos p ON p.id = sm.producto_id
+                    JOIN usuarios u ON u.id = sm.usuario_id
+                    JOIN sucursales s ON s.id = sm.sucursal_id
+                    WHERE sm.sucursal_id = ?
+                    ORDER BY sm.created_at DESC
+                    LIMIT 50
+                ");
+                $stmtMov->execute([$sucId]);
+            } else {
+                $stmtMov = $db->prepare("
+                    SELECT sm.*, p.nombre AS producto_nombre, u.nombre_display AS usuario_nombre, s.nombre AS sucursal_nombre
+                    FROM stock_movimientos sm
+                    JOIN productos p ON p.id = sm.producto_id
+                    JOIN usuarios u ON u.id = sm.usuario_id
+                    JOIN sucursales s ON s.id = sm.sucursal_id
+                    ORDER BY sm.created_at DESC
+                    LIMIT 50
+                ");
+                $stmtMov->execute();
+            }
+            jsonResponse(['success' => true, 'movimientos' => $stmtMov->fetchAll()]);
+        } catch (PDOException $e) {
+            jsonResponse(['success' => false, 'error' => 'Error al consultar movimientos: ' . $e->getMessage()], 500);
         }
-        jsonResponse(['success' => true, 'movimientos' => $stmtMov->fetchAll()]);
     }
 
     // Listado de stock de productos (Fase 2: Catálogo completo visible por sucursal)
-    if (!$sucId) {
-        // Admin sin filtro → todas las sucursales
-        $stmt = $db->prepare("
-            SELECT su.id AS sucursal_id, su.nombre AS sucursal_nombre,
-                   p.id AS producto_id,  p.nombre  AS producto_nombre, p.imagen,
-                   p.tipo_rotacion,
-                   p.precio AS precio_base,
-                   ss.precio_sucursal,
-                   COALESCE(ss.precio_sucursal, p.precio) AS precio_efectivo,
-                   COALESCE(ss.cantidad_disponible, 0) AS cantidad_disponible,
-                   COALESCE(ss.alerta_minima, 10) AS alerta_minima,
-                   COALESCE(ss.stock_predeterminado, 0) AS stock_predeterminado,
-                   COALESCE(ss.disponible_venta, 1) AS disponible_venta,
-                   ss.updated_at,
-                   c.nombre AS categoria_nombre
-            FROM   sucursales su
-            INNER JOIN productos p ON p.activo = 1
-            LEFT JOIN stock_sucursal ss ON ss.sucursal_id = su.id AND ss.producto_id = p.id
-            LEFT JOIN categorias c ON c.id = p.categoria_id
-            WHERE  su.activo = 1
-            ORDER  BY su.nombre, c.orden, p.nombre
-        ");
-        $stmt->execute();
-    } else {
-        $stmt = $db->prepare("
-            SELECT su.id AS sucursal_id, su.nombre AS sucursal_nombre,
-                   p.id AS producto_id,  p.nombre  AS producto_nombre, p.imagen,
-                   p.tipo_rotacion,
-                   p.precio AS precio_base,
-                   ss.precio_sucursal,
-                   COALESCE(ss.precio_sucursal, p.precio) AS precio_efectivo,
-                   COALESCE(ss.cantidad_disponible, 0) AS cantidad_disponible,
-                   COALESCE(ss.alerta_minima, 10) AS alerta_minima,
-                   COALESCE(ss.stock_predeterminado, 0) AS stock_predeterminado,
-                   COALESCE(ss.disponible_venta, 1) AS disponible_venta,
-                   ss.updated_at,
-                   c.nombre AS categoria_nombre
-            FROM   sucursales su
-            INNER JOIN productos p ON p.activo = 1
-            LEFT JOIN stock_sucursal ss ON ss.sucursal_id = su.id AND ss.producto_id = p.id
-            LEFT JOIN categorias c ON c.id = p.categoria_id
-            WHERE  su.id = ?
-            ORDER  BY c.orden, p.nombre
-        ");
-        $stmt->execute([$sucId]);
-    }
+    try {
+        if (!$sucId) {
+            // Admin sin filtro → todas las sucursales
+            $stmt = $db->prepare("
+                SELECT su.id AS sucursal_id, su.nombre AS sucursal_nombre,
+                       p.id AS producto_id,  p.nombre  AS producto_nombre, p.imagen,
+                       p.tipo_rotacion,
+                       p.precio AS precio_base,
+                       ss.precio_sucursal,
+                       COALESCE(ss.precio_sucursal, p.precio) AS precio_efectivo,
+                       COALESCE(ss.cantidad_disponible, 0) AS cantidad_disponible,
+                       COALESCE(ss.alerta_minima, 10) AS alerta_minima,
+                       COALESCE(ss.stock_predeterminado, 0) AS stock_predeterminado,
+                       COALESCE(ss.disponible_venta, 1) AS disponible_venta,
+                       ss.updated_at,
+                       c.nombre AS categoria_nombre
+                FROM   sucursales su
+                INNER JOIN productos p ON p.activo = 1
+                LEFT JOIN stock_sucursal ss ON ss.sucursal_id = su.id AND ss.producto_id = p.id
+                LEFT JOIN categorias c ON c.id = p.categoria_id
+                WHERE  su.activo = 1
+                ORDER  BY su.nombre, c.orden, p.nombre
+            ");
+            $stmt->execute();
+        } else {
+            $stmt = $db->prepare("
+                SELECT su.id AS sucursal_id, su.nombre AS sucursal_nombre,
+                       p.id AS producto_id,  p.nombre  AS producto_nombre, p.imagen,
+                       p.tipo_rotacion,
+                       p.precio AS precio_base,
+                       ss.precio_sucursal,
+                       COALESCE(ss.precio_sucursal, p.precio) AS precio_efectivo,
+                       COALESCE(ss.cantidad_disponible, 0) AS cantidad_disponible,
+                       COALESCE(ss.alerta_minima, 10) AS alerta_minima,
+                       COALESCE(ss.stock_predeterminado, 0) AS stock_predeterminado,
+                       COALESCE(ss.disponible_venta, 1) AS disponible_venta,
+                       ss.updated_at,
+                       c.nombre AS categoria_nombre
+                FROM   sucursales su
+                INNER JOIN productos p ON p.activo = 1
+                LEFT JOIN stock_sucursal ss ON ss.sucursal_id = su.id AND ss.producto_id = p.id
+                LEFT JOIN categorias c ON c.id = p.categoria_id
+                WHERE  su.id = ?
+                ORDER  BY c.orden, p.nombre
+            ");
+            $stmt->execute([$sucId]);
+        }
 
-    jsonResponse(['success' => true, 'data' => $stmt->fetchAll()]);
+        jsonResponse(['success' => true, 'data' => $stmt->fetchAll()]);
+    } catch (PDOException $e) {
+        jsonResponse(['success' => false, 'error' => 'Error al consultar inventario: ' . $e->getMessage()], 500);
+    }
 }
 
 // ── POST: actualizar o ingresar stock ─────────────────────────────────────

@@ -25,12 +25,12 @@ try {
             WHERE DATE(fecha) = CURDATE()
         ";
         $params = [];
-        if ($rol !== 'admin' && $sucSesion) {
-            $sql .= " AND sucursal_id = ?";
-            $params[] = $sucSesion;
-        } elseif ($rol === 'admin' && !empty($_GET['sucursal_id'])) {
+        if (($rol === 'admin' || $rol === 'encargado') && !empty($_GET['sucursal_id'])) {
             $sql .= " AND sucursal_id = ?";
             $params[] = (int) $_GET['sucursal_id'];
+        } elseif ($sucSesion) {
+            $sql .= " AND sucursal_id = ?";
+            $params[] = $sucSesion;
         }
 
         $stmt = $db->prepare($sql);
@@ -48,12 +48,12 @@ try {
     $params = [];
 
     // Filtro por sucursal
-    if ($rol !== 'admin') {
-        $where[] = "v.sucursal_id = ?";
-        $params[] = $sucSesion;
-    } elseif (!empty($_GET['sucursal_id'])) {
+    if (($rol === 'admin' || $rol === 'encargado') && !empty($_GET['sucursal_id'])) {
         $where[] = "v.sucursal_id = ?";
         $params[] = (int) $_GET['sucursal_id'];
+    } elseif ($sucSesion) {
+        $where[] = "v.sucursal_id = ?";
+        $params[] = $sucSesion;
     }
 
     // Filtro por usuario/cajero
