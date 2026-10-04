@@ -1,0 +1,21 @@
+# PATUJU POS — Git Ignore
+
+# Variables de entorno — nunca versionar credenciales reales
+.env
+
+# Dumps y herramientas de contexto
+repomix*
+
+# Documentos temporales o binarios de oficina
+*.docx
+*.tmp
+
+# Directorios de dependencias
+vendor/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Logs de PHP y servidor
+*.log

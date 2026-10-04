@@ -49,13 +49,14 @@ try {
             $db->beginTransaction();
 
             $stmt = $db->prepare("
-                INSERT INTO productos (nombre, precio, categoria_id, imagen, descripcion)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO productos (nombre, precio, categoria_id, tipo_rotacion, imagen, descripcion)
+                VALUES (?, ?, ?, ?, ?, ?)
             ");
             $stmt->execute([
                 trim($input['nombre']),
                 floatval($input['precio']),
                 intval($input['categoria_id']),
+                $input['tipo_rotacion'] ?? 'diaria',
                 $input['imagen'] ?? 'default.png',
                 $input['descripcion'] ?? ''
             ]);
@@ -102,13 +103,14 @@ try {
 
             $stmt = $db->prepare("
                 UPDATE productos 
-                SET nombre = ?, precio = ?, categoria_id = ?, imagen = ?, descripcion = ?, activo = ?
+                SET nombre = ?, precio = ?, categoria_id = ?, tipo_rotacion = ?, imagen = ?, descripcion = ?, activo = ?
                 WHERE id = ?
             ");
             $stmt->execute([
                 trim($input['nombre']),
                 floatval($input['precio']),
                 intval($input['categoria_id']),
+                $input['tipo_rotacion'] ?? 'diaria',
                 $input['imagen'] ?? 'default.png',
                 $input['descripcion'] ?? '',
                 intval($input['activo'] ?? 1),
