@@ -130,12 +130,12 @@ const Encargado = (() => {
             }
 
             html += `
-                <div class="sucursal-card" onclick="Encargado.seleccionarSucursal(${s.id}, '${escapeHtml(s.nombre)}', '${s.turno_estado}')" style="background: var(--color-surface); ${cardBorder} border-radius: var(--radius-lg); padding: 1.5rem; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; display: flex; flex-direction: column; justify-content: space-between; box-shadow: var(--shadow-sm);">
+                <div class="sucursal-card" data-sucursal-id="${s.id}" role="button" tabindex="0" aria-label="Abrir sucursal ${escapeHtml(s.nombre)}" style="background: var(--color-surface); ${cardBorder} border-radius: var(--radius-lg); padding: 1.5rem; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; display: flex; flex-direction: column; justify-content: space-between; box-shadow: var(--shadow-sm);">
                     <div>
                         <!-- Encabezado de la Tarjeta con Código y Flecha -->
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
                             <div>
-                                <span style="font-size: 0.75rem; font-weight: 700; color: var(--color-primary); text-transform: uppercase; letter-spacing: 0.05em;">${escapeHtml(s.codigo || 'SUC')} • ${escapeHtml(s.ciudad)}</span>
+                                <span style="font-size: 0.75rem; font-weight: 700; color: var(--color-primary); text-transform: uppercase; letter-spacing: 0.05em;">${escapeHtml(s.codigo || 'SUC')}</span>
                                 <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--color-text); margin-top: 0.2rem;">${escapeHtml(s.nombre)}</h3>
                             </div>
                             <span style="font-size: 1.4rem; color: var(--color-primary); line-height: 1; transition: transform 0.2s ease;" class="arrow-icon">→</span>
@@ -182,15 +182,35 @@ const Encargado = (() => {
 
                     <!-- Botón de Navegación Inferior -->
                     <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 1.25rem; padding-top: 0.8rem; border-top: 1px solid var(--color-border);">
-                        <button class="btn btn--primary" style="font-size: 0.88rem; font-weight: 700; padding: 0.45rem 1.1rem; border-radius: var(--radius-md);" onclick="event.stopPropagation(); Encargado.seleccionarSucursal(${s.id}, '${escapeHtml(s.nombre)}', '${s.turno_estado}')">
+                        <span class="btn btn--primary" aria-hidden="true" style="font-size: 0.88rem; font-weight: 700; padding: 0.45rem 1.1rem; border-radius: var(--radius-md);">
                             Ver sucursal →
-                        </button>
+                        </span>
                     </div>
                 </div>
             `;
         });
 
         container.innerHTML = html;
+
+        // Delegación: el id vive en data-*, nunca en un onclick con texto del servidor
+        container.onclick = (e) => {
+            const card = e.target.closest('[data-sucursal-id]');
+            if (card) abrirSucursalPorId(card.dataset.sucursalId);
+        };
+        container.onkeydown = (e) => {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            const card = e.target.closest('[data-sucursal-id]');
+            if (!card) return;
+            e.preventDefault();
+            abrirSucursalPorId(card.dataset.sucursalId);
+        };
+    }
+
+    function abrirSucursalPorId(id) {
+        const sucursal = sucursalesLista.find(s => s.id == id);
+        if (sucursal) {
+            seleccionarSucursal(sucursal.id, sucursal.nombre, sucursal.turno_estado);
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════

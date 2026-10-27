@@ -1,7 +1,7 @@
 -- ======================================================================
 -- PATUJU POS — Sistema de Punto de Venta Multi-Sucursal
--- Base de Datos MySQL: Esquema Unificado y Seeders Oficiales (Fases 1, 2 y 3)
--- Única Fuente de Verdad para Creación e Inicialización en Laragon / XAMPP
+-- Base de Datos MySQL: Esquema + Datos Estáticos
+-- Única Fuente de Verdad — Usuarios van en database/init_usuarios.php
 -- ======================================================================
 
 CREATE DATABASE IF NOT EXISTS patuju_pos
@@ -47,8 +47,6 @@ CREATE TABLE sucursales (
     codigo VARCHAR(10) UNIQUE NOT NULL,
     nombre VARCHAR(150) NOT NULL,
     direccion VARCHAR(255) NOT NULL,
-    ciudad VARCHAR(100) NOT NULL,
-    departamento VARCHAR(100) NOT NULL,
     telefono VARCHAR(20),
     responsable VARCHAR(150),
     horario VARCHAR(100) DEFAULT '07:00 - 14:00',
@@ -224,10 +222,8 @@ CREATE TABLE login_intentos (
 
 
 -- ======================================================================
--- DATOS INICIALES (SEEDERS COMPLETOS)
--- Sincronizado con seed-FINAL.php
--- Contraseña por defecto: patuju2024
--- Hash bcrypt: $2y$10$k2QdRrKJhz6nBqEX5YvFXOdG3HgJ8sL0mN2pQ4rS6tU8vW0xY2zA
+-- DATOS INICIALES (Estáticos)
+-- Usuarios → database/init_usuarios.php (hashes bcrypt reales)
 -- ======================================================================
 
 -- 1. Categorías Base
@@ -238,23 +234,22 @@ INSERT INTO categorias (id, nombre, icono, orden) VALUES
 (4, 'Extras',   '🍽️', 4);
 
 -- 2. 15 Sucursales Oficiales
--- NOTA: ciudad/departamento se rellenan con los valores correctos por región
-INSERT INTO sucursales (id, codigo, nombre, direccion, ciudad, departamento, telefono, responsable, horario, latitud, longitud) VALUES
-(1,  'SUC-001', 'Patuju Central',           'Barrio Melchor Pinto #1234',   'La Paz',     'La Paz',     '+591 2 2441234', 'María López',        '07:00 - 14:00', -16.5000000, -68.1500000),
-(2,  'SUC-002', 'Patuju Lujan',             'Av. Lujan-Av. Los Chacos #456','La Paz',     'La Paz',     '+591 2 2425678', 'Carlos Mamani',      '07:00 - 14:00', -16.5050000, -68.1350000),
-(3,  'SUC-003', 'Patuju Lujan2',            'Av. Lujan #789',               'La Paz',     'La Paz',     '+591 2 2223456', 'Ana Quispe',         '07:00 - 14:00', -16.5150000, -68.1200000),
-(4,  'SUC-004', 'Patuju 2 de Agosto',       'Av. 2 de agosto #321',         'La Paz',     'La Paz',     '+591 2 2771234', 'Pedro Condori',      '07:30 - 14:30', -16.5300000, -68.0900000),
-(5,  'SUC-005', 'Patuju Plan3000',          'Zona Plan 3000 #1500',         'La Paz',     'La Paz',     '+591 2 2791111', 'Rosa Choque',        '07:00 - 13:00', -16.5350000, -68.0850000),
-(6,  'SUC-006', 'Patuju 1Plan3000',         'Zona Plan 3000 #234',          'Cochabamba', 'Cochabamba', '+591 4 4251234', 'Jorge Rojas',        '07:00 - 14:00', -17.3935000, -66.1570000),
-(7,  'SUC-007', 'Patuju 2Plan3000',         'Zona Plan 3000 #890',          'Cochabamba', 'Cochabamba', '+591 4 4405678', 'Lucía Flores',       '07:00 - 14:00', -17.3800000, -66.1650000),
-(8,  'SUC-008', 'Patuju Santa Cruz Centro', 'AV. Cañoto #100',              'Santa Cruz', 'Santa Cruz', '+591 3 3361234', 'Miguel Suárez',      '07:00 - 14:00', -17.7833000, -63.1821000),
-(9,  'SUC-009', 'Patuju Equipetrol',        'Av. San Martín #2500',         'Santa Cruz', 'Santa Cruz', '+591 3 3425678', 'Daniela Peña',       '07:30 - 14:30', -17.7700000, -63.2000000),
-(10, 'SUC-010', 'Patuju 1',                 'C. España #45',                'Sucre',      'Chuquisaca', '+591 4 6451234', 'Fernando Arce',      '07:00 - 13:00', -19.0353000, -65.2592000),
-(11, 'SUC-011', 'Patuju 2',                 'Av. 6 de Octubre #678',        'Oruro',      'Oruro',      '+591 2 5251234', 'Patricia Vargas',    '07:00 - 13:00', -17.9622000, -67.1062000),
-(12, 'SUC-012', 'Patuju 3',                 'C. Bolívar #200',              'Potosí',     'Potosí',     '+591 2 6221234', 'Roberto Chávez',     '07:00 - 13:00', -19.5836000, -65.7531000),
-(13, 'SUC-013', 'Patuju 4',                 'Av. Víctor Paz #345',          'Tarija',     'Tarija',     '+591 4 6641234', 'Carmen Gutiérrez',   '07:00 - 14:00', -21.5355000, -64.7296000),
-(14, 'SUC-014', 'Patuju 5',                 'Av. 6 de Agosto #90',          'Trinidad',   'Beni',       '+591 3 4621234', 'Andrés Salvatierra', '07:00 - 13:00', -14.8333000, -64.9000000),
-(15, 'SUC-015', 'Patuju 6',                 'Av. 6 de Marzo #4500',         'El Alto',    'La Paz',     '+591 2 2841234', 'Juana Huanca',       '06:30 - 13:00', -16.5100000, -68.1950000);
+INSERT INTO sucursales (id, codigo, nombre, direccion, telefono, responsable, horario, latitud, longitud) VALUES
+(1,  'SUC-001', 'Patuju Central',           'Barrio Melchor Pinto #1234',    '+591 2 2441234', 'María López',        '07:00 - 14:00', -16.5000000, -68.1500000),
+(2,  'SUC-002', 'Patuju Lujan',             'Av. Lujan-Av. Los Chacos #456', '+591 2 2425678', 'Carlos Mamani',      '07:00 - 14:00', -16.5050000, -68.1350000),
+(3,  'SUC-003', 'Patuju Lujan2',            'Av. Lujan #789',                '+591 2 2223456', 'Ana Quispe',         '07:00 - 14:00', -16.5150000, -68.1200000),
+(4,  'SUC-004', 'Patuju 2 de Agosto',       'Av. 2 de agosto #321',          '+591 2 2771234', 'Pedro Condori',      '07:30 - 14:30', -16.5300000, -68.0900000),
+(5,  'SUC-005', 'Patuju Plan3000',          'Zona Plan 3000 #1500',          '+591 2 2791111', 'Rosa Choque',        '07:00 - 13:00', -16.5350000, -68.0850000),
+(6,  'SUC-006', 'Patuju 1Plan3000',         'Zona Plan 3000 #234',           '+591 4 4251234', 'Jorge Rojas',        '07:00 - 14:00', -17.3935000, -66.1570000),
+(7,  'SUC-007', 'Patuju 2Plan3000',         'Zona Plan 3000 #890',           '+591 4 4405678', 'Lucía Flores',       '07:00 - 14:00', -17.3800000, -66.1650000),
+(8,  'SUC-008', 'Patuju Santa Cruz Centro', 'AV. Cañoto #100',               '+591 3 3361234', 'Miguel Suárez',      '07:00 - 14:00', -17.7833000, -63.1821000),
+(9,  'SUC-009', 'Patuju Equipetrol',        'Av. San Martín #2500',          '+591 3 3425678', 'Daniela Peña',       '07:30 - 14:30', -17.7700000, -63.2000000),
+(10, 'SUC-010', 'Patuju 1',                 'C. España #45',                 '+591 4 6451234', 'Fernando Arce',      '07:00 - 13:00', -19.0353000, -65.2592000),
+(11, 'SUC-011', 'Patuju 2',                 'Av. 6 de Octubre #678',         '+591 2 5251234', 'Patricia Vargas',    '07:00 - 13:00', -17.9622000, -67.1062000),
+(12, 'SUC-012', 'Patuju 3',                 'C. Bolívar #200',               '+591 2 6221234', 'Roberto Chávez',     '07:00 - 13:00', -19.5836000, -65.7531000),
+(13, 'SUC-013', 'Patuju 4',                 'Av. Víctor Paz #345',           '+591 4 6641234', 'Carmen Gutiérrez',   '07:00 - 14:00', -21.5355000, -64.7296000),
+(14, 'SUC-014', 'Patuju 5',                 'Av. 6 de Agosto #90',           '+591 3 4621234', 'Andrés Salvatierra', '07:00 - 13:00', -14.8333000, -64.9000000),
+(15, 'SUC-015', 'Patuju 6',                 'Av. 6 de Marzo #4500',          '+591 2 2841234', 'Juana Huanca',       '06:30 - 13:00', -16.5100000, -68.1950000);
 
 -- 3. Catálogo de Productos (16 ítems del menú real Patuju)
 INSERT INTO productos (id, nombre, precio, categoria_id, tipo_rotacion, descripcion) VALUES
@@ -278,70 +273,7 @@ INSERT INTO productos (id, nombre, precio, categoria_id, tipo_rotacion, descripc
 (15, 'Jugo de guineo',           7.00, 3, 'lenta',  'Jugo natural recién licuado'),
 (16, 'Refresco de papaya',       5.00, 3, 'lenta',  'Jugo natural exprimido');
 
--- 4. Usuarios: 1 Admin + 3 Encargados + 15 Cajeros
--- Contraseña: patuju2024
--- Hash bcrypt válido: $2y$10$k2QdRrKJhz6nBqEX5YvFXOdG3HgJ8sL0mN2pQ4rS6tU8vW0xY2zA
-INSERT INTO usuarios (username, password_hash, nombre_display, rol, sucursal_id, activo) VALUES
--- Admin Global (sin sucursal)
-('admin',
- '$2y$10$k2QdRrKJhz6nBqEX5YvFXOdG3HgJ8sL0mN2pQ4rS6tU8vW0xY2zA',
- 'Administrador General', 'admin', NULL, 1),
--- 3 Encargados regionales
-('encargado_encargado_central',
- '$2y$10$k2QdRrKJhz6nBqEX5YvFXOdG3HgJ8sL0mN2pQ4rS6tU8vW0xY2zA',
- 'Encargado Central', 'encargado', 1, 1),
-('encargado_encargado_cochabamba',
- '$2y$10$k2QdRrKJhz6nBqEX5YvFXOdG3HgJ8sL0mN2pQ4rS6tU8vW0xY2zA',
- 'Encargado Cochabamba', 'encargado', 6, 1),
-('encargado_encargado_santa_cruz',
- '$2y$10$k2QdRrKJhz6nBqEX5YvFXOdG3HgJ8sL0mN2pQ4rS6tU8vW0xY2zA',
- 'Encargado Santa Cruz', 'encargado', 8, 1),
--- 15 Cajeros (uno por sucursal)
-('caja_caja_central',
- '$2y$10$k2QdRrKJhz6nBqEX5YvFXOdG3HgJ8sL0mN2pQ4rS6tU8vW0xY2zA',
- 'Caja Central', 'caja', 1, 1),
-('caja_caja_lujan',
- '$2y$10$k2QdRrKJhz6nBqEX5YvFXOdG3HgJ8sL0mN2pQ4rS6tU8vW0xY2zA',
- 'Caja Lujan', 'caja', 2, 1),
-('caja_caja_lujan2',
- '$2y$10$k2QdRrKJhz6nBqEX5YvFXOdG3HgJ8sL0mN2pQ4rS6tU8vW0xY2zA',
- 'Caja Lujan2', 'caja', 3, 1),
-('caja_caja_2_de_agosto',
- '$2y$10$k2QdRrKJhz6nBqEX5YvFXOdG3HgJ8sL0mN2pQ4rS6tU8vW0xY2zA',
- 'Caja 2 de Agosto', 'caja', 4, 1),
-('caja_caja_plan3000',
- '$2y$10$k2QdRrKJhz6nBqEX5YvFXOdG3HgJ8sL0mN2pQ4rS6tU8vW0xY2zA',
- 'Caja Plan3000', 'caja', 5, 1),
-('caja_caja_1plan3000',
- '$2y$10$k2QdRrKJhz6nBqEX5YvFXOdG3HgJ8sL0mN2pQ4rS6tU8vW0xY2zA',
- 'Caja 1Plan3000', 'caja', 6, 1),
-('caja_caja_2plan3000',
- '$2y$10$k2QdRrKJhz6nBqEX5YvFXOdG3HgJ8sL0mN2pQ4rS6tU8vW0xY2zA',
- 'Caja 2Plan3000', 'caja', 7, 1),
-('caja_caja_santa_cruz_centro',
- '$2y$10$k2QdRrKJhz6nBqEX5YvFXOdG3HgJ8sL0mN2pQ4rS6tU8vW0xY2zA',
- 'Caja Santa Cruz Centro', 'caja', 8, 1),
-('caja_caja_equipetrol',
- '$2y$10$k2QdRrKJhz6nBqEX5YvFXOdG3HgJ8sL0mN2pQ4rS6tU8vW0xY2zA',
- 'Caja Equipetrol', 'caja', 9, 1),
-('caja_caja_1',
- '$2y$10$k2QdRrKJhz6nBqEX5YvFXOdG3HgJ8sL0mN2pQ4rS6tU8vW0xY2zA',
- 'Caja 1', 'caja', 10, 1),
-('caja_caja_2',
- '$2y$10$k2QdRrKJhz6nBqEX5YvFXOdG3HgJ8sL0mN2pQ4rS6tU8vW0xY2zA',
- 'Caja 2', 'caja', 11, 1),
-('caja_caja_3',
- '$2y$10$k2QdRrKJhz6nBqEX5YvFXOdG3HgJ8sL0mN2pQ4rS6tU8vW0xY2zA',
- 'Caja 3', 'caja', 12, 1),
-('caja_caja_4',
- '$2y$10$k2QdRrKJhz6nBqEX5YvFXOdG3HgJ8sL0mN2pQ4rS6tU8vW0xY2zA',
- 'Caja 4', 'caja', 13, 1),
-('caja_caja_5',
- '$2y$10$k2QdRrKJhz6nBqEX5YvFXOdG3HgJ8sL0mN2pQ4rS6tU8vW0xY2zA',
- 'Caja 5', 'caja', 14, 1),
-('caja_caja_6',
- '$2y$10$k2QdRrKJhz6nBqEX5YvFXOdG3HgJ8sL0mN2pQ4rS6tU8vW0xY2zA',
- 'Caja 6', 'caja', 15, 1);
+-- 4. Usuarios → Ejecutar database/init_usuarios.php después de importar este archivo
 
 -- 5. Inventario Inicial con distinción por tipo de rotación:
 -- Salteñas (rotación diaria): inicializan con plantilla predeterminada para apertura rápida

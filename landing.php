@@ -9,7 +9,7 @@ if (file_exists(__DIR__ . '/config/database.php')) {
     try {
         require_once __DIR__ . '/config/database.php';
         $db = getDB();
-        $stmt = $db->query("SELECT * FROM sucursales WHERE activo = 1 ORDER BY ciudad, nombre");
+        $stmt = $db->query("SELECT * FROM sucursales WHERE activo = 1 ORDER BY nombre");
         $sucursales = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $db_connected = true;
     } catch (Exception $e) {
@@ -22,42 +22,36 @@ if (!$db_connected || empty($sucursales)) {
     $sucursales = [
         [
             'nombre' => 'Central La Paz',
-            'ciudad' => 'La Paz',
             'direccion' => 'Av. 6 de Agosto #1234, Sopocachi',
             'telefono' => '+591 2 2441234',
             'horario' => '08:00 - 14:00'
         ],
         [
             'nombre' => 'Sucursal Calacoto',
-            'ciudad' => 'La Paz',
             'direccion' => 'Av. Ballivián #567, esq. C. 12',
             'telefono' => '+591 2 2794567',
             'horario' => '08:00 - 14:00'
         ],
         [
             'nombre' => 'Central Santa Cruz',
-            'ciudad' => 'Santa Cruz',
             'direccion' => 'Av. Monseñor Rivero #890',
             'telefono' => '+591 3 3338901',
             'horario' => '08:00 - 13:00'
         ],
         [
             'nombre' => 'Sucursal Equipetrol',
-            'ciudad' => 'Santa Cruz',
             'direccion' => 'Av. San Martín #432',
             'telefono' => '+591 3 3444321',
             'horario' => '08:00 - 13:00'
         ],
         [
             'nombre' => 'Central Cochabamba',
-            'ciudad' => 'Cochabamba',
             'direccion' => 'El Prado, Av. Ballivián #234',
             'telefono' => '+591 4 4222345',
             'horario' => '08:00 - 13:30'
         ],
         [
             'nombre' => 'Sucursal Cala Cala',
-            'ciudad' => 'Cochabamba',
             'direccion' => 'Av. Libertador Bolívar #789',
             'telefono' => '+591 4 4337890',
             'horario' => '08:00 - 13:30'
@@ -78,7 +72,7 @@ if (!$db_connected || empty($sucursales)) {
     <!-- Navbar -->
     <nav class="navbar">
         <div class="container">
-            <a href="#" class="logo">🥟 PATUJU</a>
+            <a href="#inicio" class="logo" aria-label="PATUJU, ir al inicio">🥟 PATUJU</a>
             
             <div class="nav-links" id="navLinks">
                 <a href="#inicio">Inicio</a>
@@ -97,7 +91,7 @@ if (!$db_connected || empty($sucursales)) {
                 <?php endif; ?>
             </div>
 
-            <button class="mobile-menu-btn" id="mobileMenuBtn">
+            <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Abrir menú" aria-controls="navLinks" aria-expanded="false">
                 ☰
             </button>
         </div>
@@ -213,7 +207,6 @@ if (!$db_connected || empty($sucursales)) {
                         <div class="sucursal-icon">📍</div>
                         <div>
                             <h3 style="font-size: 1.1rem; margin-bottom: 0.2rem;"><?php echo htmlspecialchars($sucursal['nombre']); ?></h3>
-                            <span style="color: var(--color-text-muted); font-size: 0.8rem;"><?php echo htmlspecialchars($sucursal['ciudad']); ?></span>
                         </div>
                     </div>
                     <div class="sucursal-info">
@@ -232,7 +225,7 @@ if (!$db_connected || empty($sucursales)) {
         <div class="container">
             <div class="footer-grid">
                 <div class="footer-col">
-                    <a href="#" class="logo" style="margin-bottom: 1rem;">🥟 PATUJU</a>
+                    <a href="#" class="logo" style="margin-bottom: 1rem;" aria-label="PATUJU, ir al inicio">🥟 PATUJU</a>
                     <p>Tradición, sabor y calidad desde 1995. La mejor salteña de Bolivia, horneada diariamente para ti.</p>
                 </div>
                 
@@ -255,7 +248,7 @@ if (!$db_connected || empty($sucursales)) {
             </div>
             
             <div class="footer-bottom">
-                &copy; 2024 Patuju — Todos los derechos reservados.
+                &copy; <?= date('Y') ?> Patuju — Todos los derechos reservados.
             </div>
         </div>
     </footer>
@@ -267,7 +260,9 @@ if (!$db_connected || empty($sucursales)) {
         const navLinks = document.getElementById('navLinks');
         
         mobileBtn.addEventListener('click', () => {
-            navLinks.classList.toggle('active');
+            const abierto = navLinks.classList.toggle('active');
+            mobileBtn.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+            mobileBtn.setAttribute('aria-label', abierto ? 'Cerrar menú' : 'Abrir menú');
         });
 
         // Close mobile menu when clicking a link
@@ -275,6 +270,8 @@ if (!$db_connected || empty($sucursales)) {
             link.addEventListener('click', () => {
                 if (window.innerWidth <= 768) {
                     navLinks.classList.remove('active');
+                    mobileBtn.setAttribute('aria-expanded', 'false');
+                    mobileBtn.setAttribute('aria-label', 'Abrir menú');
                 }
             });
         });

@@ -61,7 +61,15 @@ $sucursalId = $_SESSION['sucursal_id'] ?? 0;
     </main>
 
     <!-- ── Caja / Carrito (Derecha) ──────────── -->
-    <aside class="caja" id="caja">
+    <div class="caja__backdrop" id="caja-backdrop"></div>
+    <aside class="caja" id="caja" aria-label="Carrito de venta">
+        <button type="button" class="caja__handle" id="btn-toggle-carrito" aria-expanded="false" aria-controls="caja-items">
+            <span class="caja__handle-info">
+                <span class="caja__handle-label">Carrito <span class="caja__badge" id="caja-badge-mobile">0</span></span>
+                <span class="caja__handle-total" id="caja-total-mobile">Bs. 0.00</span>
+            </span>
+            <span class="caja__handle-action" aria-hidden="true"></span>
+        </button>
         <div class="caja__header">
             <h2 class="caja__title">
                 🧾 Caja
@@ -98,25 +106,25 @@ $sucursalId = $_SESSION['sucursal_id'] ?? 0;
 <div id="ticket-print" class="ticket-print"></div>
 
 <!-- ── Modal (Historial) ─────────────────────── -->
-<div class="modal-overlay" id="modal-overlay">
+<div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="modal">
         <div class="modal__header">
             <h3 class="modal__title" id="modal-title">Historial</h3>
-            <button class="modal__close" onclick="App.cerrarModal()">✕</button>
+            <button class="modal__close" onclick="App.cerrarModal()" aria-label="Cerrar historial">✕</button>
         </div>
         <div class="modal__body" id="modal-body"></div>
     </div>
 </div>
 
 <!-- ── Toasts ────────────────────────────────── -->
-<div class="toast-container" id="toast-container"></div>
+<div class="toast-container" id="toast-container" role="status" aria-live="polite" aria-atomic="false"></div>
 
 
 <!-- ── Modal Apertura Turno ────────────────────── -->
-<div class="modal-overlay" id="modal-abrir-turno">
+<div class="modal-overlay" id="modal-abrir-turno" role="dialog" aria-modal="true" aria-labelledby="titulo-abrir-turno">
     <div class="modal" style="max-width:400px;text-align:center;">
         <div class="modal__header">
-            <h3 class="modal__title">Apertura de Caja</h3>
+            <h3 class="modal__title" id="titulo-abrir-turno">Apertura de Caja</h3>
         </div>
         <div class="modal__body" style="padding:2rem;">
             <p style="margin-bottom:1.5rem;color:var(--color-text-dim);">Debes abrir un turno para empezar a vender.</p>
@@ -130,11 +138,11 @@ $sucursalId = $_SESSION['sucursal_id'] ?? 0;
 </div>
 
 <!-- ── Modal Cobro ──────────────────────────────── -->
-<div class="modal-overlay" id="modal-cobro">
+<div class="modal-overlay" id="modal-cobro" role="dialog" aria-modal="true" aria-labelledby="titulo-cobro">
     <div class="modal" style="max-width:450px;">
         <div class="modal__header">
-            <h3 class="modal__title">💰 Confirmar Cobro</h3>
-            <button class="modal__close" onclick="App.cerrarModalCobro()">✕</button>
+            <h3 class="modal__title" id="titulo-cobro">💰 Confirmar Cobro</h3>
+            <button class="modal__close" onclick="App.cerrarModalCobro()" aria-label="Cerrar cobro">✕</button>
         </div>
         <div class="modal__body" style="padding:1.5rem;">
             <div style="font-size:2rem;text-align:center;font-weight:bold;margin-bottom:1.5rem;color:var(--color-primary);">
@@ -171,11 +179,11 @@ $sucursalId = $_SESSION['sucursal_id'] ?? 0;
 </div>
 
 <!-- ── Modal Gestión de Turno (Corte X/Z) ────────── -->
-<div class="modal-overlay" id="modal-gestion-turno">
+<div class="modal-overlay" id="modal-gestion-turno" role="dialog" aria-modal="true" aria-labelledby="titulo-gestion-turno">
     <div class="modal" style="max-width:450px;">
         <div class="modal__header">
-            <h3 class="modal__title">📊 Gestión de Turno</h3>
-            <button class="modal__close" onclick="App.cerrarModalGestionTurno()">✕</button>
+            <h3 class="modal__title" id="titulo-gestion-turno">📊 Gestión de Turno</h3>
+            <button class="modal__close" onclick="App.cerrarModalGestionTurno()" aria-label="Cerrar gestión de turno">✕</button>
         </div>
         <div class="modal__body" style="padding:1.5rem;">
             <div id="turno-info" style="margin-bottom:1.5rem;line-height:1.6;font-size:0.95rem;">

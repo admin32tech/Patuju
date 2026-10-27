@@ -60,7 +60,7 @@ const App = (() => {
 
         let html = `<button class="cat-filter__btn active" data-cat="todas">🏪 Todas</button>`;
         productos.forEach(cat => {
-            html += `<button class="cat-filter__btn" data-cat="${cat.id}">${cat.icono} ${cat.nombre}</button>`;
+            html += `<button class="cat-filter__btn" data-cat="${escapeHtml(cat.id)}">${escapeHtml(cat.icono)} ${escapeHtml(cat.nombre)}</button>`;
         });
         container.innerHTML = html;
 
@@ -187,6 +187,8 @@ const App = (() => {
         const container = $('#caja-items');
         const totalEl = $('#caja-total');
         const badgeEl = $('#caja-badge');
+        const totalMobileEl = $('#caja-total-mobile');
+        const badgeMobileEl = $('#caja-badge-mobile');
         const btnCobrar = $('#btn-cobrar');
         const btnCobrarPrint = $('#btn-cobrar-imprimir');
 
@@ -201,6 +203,8 @@ const App = (() => {
             `;
             totalEl.textContent = '0.00';
             badgeEl.textContent = '0';
+            if (totalMobileEl) totalMobileEl.textContent = 'Bs. 0.00';
+            if (badgeMobileEl) badgeMobileEl.textContent = '0';
             if (btnCobrar) btnCobrar.disabled = true;
             if (btnCobrarPrint) btnCobrarPrint.disabled = true;
             return;
@@ -235,6 +239,8 @@ const App = (() => {
         container.innerHTML = html;
         totalEl.textContent = total.toFixed(2);
         badgeEl.textContent = totalItems;
+        if (totalMobileEl) totalMobileEl.textContent = 'Bs. ' + total.toFixed(2);
+        if (badgeMobileEl) badgeMobileEl.textContent = totalItems;
         if (btnCobrar) btnCobrar.disabled = false;
         if (btnCobrarPrint) btnCobrarPrint.disabled = false;
     }
@@ -404,6 +410,7 @@ const App = (() => {
         calcularVuelto();
         
         $('#modal-cobro').classList.add('active');
+        setCarritoAbierto(false);
         if (recibidoInput) {
             setTimeout(() => recibidoInput.focus(), 100);
         }
@@ -480,6 +487,7 @@ const App = (() => {
                 renderCarrito();
                 cargarTotalDia();
                 cerrarModalCobro();
+                setCarritoAbierto(false);
                 cargarProductos(); // Recargar para actualizar stock en UI
             } else {
                 toast('❌ ' + (data.error || 'Error al registrar'), 'error');
@@ -512,10 +520,21 @@ const App = (() => {
             }
         });
 
+        // Hoja inferior del carrito (móvil)
+        const toggleCarritoBtn = $('#btn-toggle-carrito');
+        if (toggleCarritoBtn) {
+            toggleCarritoBtn.addEventListener('click', toggleCarrito);
+        }
+        const cajaBackdrop = $('#caja-backdrop');
+        if (cajaBackdrop) {
+            cajaBackdrop.addEventListener('click', () => setCarritoAbierto(false));
+        }
+
         // Tecla ESC
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 if ($('#modal-abrir-turno').classList.contains('active')) return;
+                setCarritoAbierto(false);
                 cerrarModal();
                 cerrarModalCobro();
                 cerrarModalGestionTurno();
@@ -662,6 +681,22 @@ const App = (() => {
         }
     }
 
+    // ── Hoja inferior del carrito ─────────────
+    function setCarritoAbierto(abierto) {
+        const caja = $('#caja');
+        const btn = $('#btn-toggle-carrito');
+        if (!caja) return;
+        caja.classList.toggle('is-open', abierto);
+        document.body.classList.toggle('caja-abierta', abierto);
+        if (btn) btn.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+    }
+
+    function toggleCarrito() {
+        const caja = $('#caja');
+        if (!caja) return;
+        setCarritoAbierto(!caja.classList.contains('is-open'));
+    }
+
     // ── Cerrar modal ──────────────────────────
     function cerrarModal() {
         const overlay = $('#modal-overlay');
@@ -676,10 +711,17 @@ const App = (() => {
         const icon = type === 'success' ? '✅' : '❌';
         const el = document.createElement('div');
         el.className = `toast toast--${type}`;
-        el.innerHTML = `
-            <span class="toast__icon">${icon}</span>
-            <span class="toast__message">${message}</span>
-        `;
+
+        const iconEl = document.createElement('span');
+        iconEl.className = 'toast__icon';
+        iconEl.setAttribute('aria-hidden', 'true');
+        iconEl.textContent = icon;
+
+        const msgEl = document.createElement('span');
+        msgEl.className = 'toast__message';
+        msgEl.textContent = message;
+
+        el.append(iconEl, msgEl);
         container.appendChild(el);
         setTimeout(() => el.remove(), 3200);
     }
@@ -703,6 +745,7 @@ const App = (() => {
         cerrarTurno,
         verHistorial,
         cerrarModal,
+        toggleCarrito,
         toast
     };
 })();

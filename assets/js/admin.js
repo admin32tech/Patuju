@@ -6,6 +6,7 @@ const Admin = (() => {
     let editandoId = null;
     let tabActual = 'productos';
     let lastSyncTimestamp = 0; // BUG-E: usado para detectar cambios y auto-refrescar
+    let productosCache = [];
 
     const $ = (sel) => document.querySelector(sel);
 
@@ -26,6 +27,27 @@ const Admin = (() => {
         if (form) {
             form.addEventListener('submit', guardarProducto);
         }
+
+        // Delegación de eventos: evita inyectar datos en atributos onclick
+        const tbody = $('#admin-tbody');
+        if (tbody) {
+            tbody.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-action]');
+                if (!btn) return;
+                const id = parseInt(btn.dataset.id, 10);
+                const prod = productosCache.find(p => p.id == id);
+                if (!prod) return;
+
+                if (btn.dataset.action === 'editar') {
+                    editarProducto(prod.id, prod.nombre, prod.precio, prod.categoria_id, prod.imagen || '', prod.descripcion || '');
+                } else if (btn.dataset.action === 'desactivar') {
+                    desactivarProducto(prod.id, prod.nombre);
+                } else if (btn.dataset.action === 'activar') {
+                    activarProducto(prod.id, prod.nombre);
+                }
+            });
+        }
+
         startAutoSync(); // BUG-E FIX: inicia el polling de sincronización
     }
 
@@ -69,6 +91,7 @@ const Admin = (() => {
             const data = await res.json();
 
             if (data.success) {
+                productosCache = data.productos || [];
                 renderTablaProductos(data.productos);
                 renderCategorias(data.categorias);
             }
@@ -82,7 +105,7 @@ const Admin = (() => {
         if (!sel) return;
         sel.innerHTML = '<option value="">Seleccionar categoría...</option>';
         categorias.forEach(c => {
-            sel.innerHTML += `<option value="${c.id}">${c.nombre}</option>`;
+            sel.innerHTML += `<option value="${escapeHtml(c.id)}">${escapeHtml(c.nombre)}</option>`;
         });
     }
 
@@ -119,10 +142,10 @@ const Admin = (() => {
                     <td><span class="badge ${badgeClass}">${badgeText}</span></td>
                     <td>
                         <div class="admin-actions">
-                            <button class="btn btn--sm" onclick="Admin.editarProducto(${p.id}, '${escapeHtml(p.nombre)}', ${p.precio}, ${p.categoria_id}, '${escapeHtml(p.imagen || '')}', '${escapeHtml(p.descripcion || '')}')" title="Editar">✏️</button>
+                            <button class="btn btn--sm" data-action="editar" data-id="${p.id}" title="Editar" aria-label="Editar ${escapeHtml(p.nombre)}">✏️</button>
                             ${activo 
-                                ? `<button class="btn btn--sm btn--danger" onclick="Admin.desactivarProducto(${p.id}, '${escapeHtml(p.nombre)}')" title="Desactivar">🗑️</button>`
-                                : `<button class="btn btn--sm" onclick="Admin.activarProducto(${p.id}, '${escapeHtml(p.nombre)}')" title="Reactivar">♻️</button>`
+                                ? `<button class="btn btn--sm btn--danger" data-action="desactivar" data-id="${p.id}" title="Desactivar" aria-label="Desactivar ${escapeHtml(p.nombre)}">🗑️</button>`
+                                : `<button class="btn btn--sm" data-action="activar" data-id="${p.id}" title="Reactivar" aria-label="Reactivar ${escapeHtml(p.nombre)}">♻️</button>`
                             }
                         </div>
                     </td>

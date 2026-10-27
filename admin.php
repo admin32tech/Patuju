@@ -3,7 +3,7 @@ require_once __DIR__ . '/config/auth.php';
 verificarSesion('admin');
 
 $db = getDB();
-$sucursales = $db->query("SELECT id, nombre, ciudad, departamento FROM sucursales WHERE activo = 1 ORDER BY id ASC")->fetchAll();
+$sucursales = $db->query("SELECT id, nombre, direccion FROM sucursales WHERE activo = 1 ORDER BY id ASC")->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -149,7 +149,7 @@ $sucursales = $db->query("SELECT id, nombre, ciudad, departamento FROM sucursale
                     <div class="sucursal-admin-card" id="card-suc-<?= $s['id'] ?>" onclick="Admin.seleccionarSucursalStock(<?= $s['id'] ?>)" style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 1rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s ease;">
                         <div>
                             <div style="font-weight: 700; color: var(--color-text);"><?= htmlspecialchars($s['nombre']) ?></div>
-                            <div style="font-size: 0.8rem; color: var(--color-text-muted);">📍 <?= htmlspecialchars($s['ciudad']) ?></div>
+                            <div style="font-size: 0.8rem; color: var(--color-text-muted);">📍 <?= htmlspecialchars($s['direccion']) ?></div>
                         </div>
                         <button class="btn btn--sm btn--primary" onclick="event.stopPropagation(); Admin.seleccionarSucursalStock(<?= $s['id'] ?>)" style="font-size: 0.78rem; font-weight: 600;">
                             Ver sucursal →
@@ -166,7 +166,7 @@ $sucursales = $db->query("SELECT id, nombre, ciudad, departamento FROM sucursale
                     <select id="filtro-stock-sucursal" style="background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0.5rem 0.8rem; color: var(--color-text); font-weight: 600;" onchange="Admin.cargarStockSucursal()">
                         <option value="">Todas las Sucursales (Consolidado)</option>
                         <?php foreach ($sucursales as $s): ?>
-                        <option value="<?= $s['id'] ?>"><?= htmlspecialchars($s['nombre']) ?> (<?= htmlspecialchars($s['ciudad']) ?>)</option>
+                        <option value="<?= $s['id'] ?>"><?= htmlspecialchars($s['nombre']) ?></option>
                         <?php endforeach; ?>
                     </select>
 

@@ -40,8 +40,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 s.codigo,
                 s.nombre,
                 s.direccion,
-                s.ciudad,
-                s.departamento,
                 COALESCE(u_enc.encargado_nombre, 'Sin asignar') AS encargado_nombre,
                 COALESCE(stk.total_productos, 0) AS total_productos,
                 COALESCE(stk.stock_total_unidades, 0) AS stock_total_unidades,
