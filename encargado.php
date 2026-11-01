@@ -15,7 +15,7 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
     <meta name="description" content="Patuju POS — Panel de Gestión de Sucursales">
     <title>Patuju POS — Panel de Sucursales (<?= htmlspecialchars($sucursalNombre) ?>)</title>
     <link rel="stylesheet" href="assets/css/styles.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏬</text></svg>">
+    <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
 </head>
 <body data-sucursal-id="<?= $sucursalId ?>" data-sucursal-nombre="<?= htmlspecialchars($sucursalNombre) ?>" data-usuario-rol="<?= htmlspecialchars($rol) ?>">
 
@@ -24,7 +24,7 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
     <!-- ── Topbar ────────────────────────────── -->
     <header class="topbar">
         <div class="topbar__brand">
-            <span class="topbar__logo">🏬</span>
+
             <div>
                 <div class="topbar__title">PANEL DE SUCURSAL</div>
                 <div class="topbar__subtitle" id="topbar-subtitulo"><?= htmlspecialchars($sucursalNombre) ?></div>
@@ -32,16 +32,18 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
         </div>
         <div class="topbar__actions">
             <div id="topbar-sucursal-badge" class="topbar__sucursal" style="display:flex;align-items:center;gap:0.4rem;padding:0.35rem 0.8rem;background:var(--color-surface-2);border-radius:var(--radius-full);font-size:0.85rem;">
-                <span>📍</span>
+                <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#pin"></use></svg>
                 <span id="topbar-sucursal-nombre"><?= htmlspecialchars($sucursalNombre) ?></span>
             </div>
-            <div style="display:flex;align-items:center;gap:0.4rem;padding:0.35rem 0.8rem;background:var(--color-surface-2);border-radius:var(--radius-full);font-size:0.85rem;color:var(--color-primary);">
-                <span>👤</span>
+            <div style="display:flex;align-items:center;gap:0.4rem;padding:0.35rem 0.8rem;background:var(--color-surface-2);border-radius:var(--radius-full);font-size:0.85rem;color:var(--color-primary-ink);">
+                <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#user"></use></svg>
                 <span><?= htmlspecialchars($usuarioNombre) ?> (Encargado)</span>
             </div>
             <span class="topbar__clock" id="clock">00:00:00</span>
-            <a href="index.php" class="btn btn--primary" id="btn-ir-caja">🥟 Ir a Caja POS</a>
-            <a href="logout.php" class="btn" style="color:var(--color-danger)">🚪 Salir</a>
+            <?php if ($sucursalId > 0): ?>
+            <a href="index.php" class="btn btn--primary" id="btn-ir-caja"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#cart"></use></svg> Ir a Caja POS</a>
+            <?php endif; ?>
+            <a href="logout.php" class="btn" style="color:var(--color-danger)"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#logout"></use></svg> Salir</a>
         </div>
     </header>
 
@@ -56,7 +58,7 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
             <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
                 <div>
                     <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--color-text); margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem;">
-                        <span>🏬</span> Sucursales Asignadas
+                        Sucursales Asignadas
                     </h2>
                     <p style="font-size: 0.9rem; color: var(--color-text-muted);">
                         Selecciona una sucursal para consultar su inventario, ingresar lotes de mercadería o ajustar precios.
@@ -64,12 +66,12 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
                 </div>
                 <div style="display: flex; gap: 0.75rem; align-items: center;">
                     <div style="display: flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.9rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 0.85rem;">
-                        <span>📅</span>
+
                         <span id="fecha-hoy-badge" style="font-weight: 600; color: var(--color-text);"><?= date('d/m/Y') ?></span>
                     </div>
                     <?php if ($rol === 'admin' || $sucursalId > 0): ?>
                     <button class="btn" onclick="Encargado.cargarResumenSucursales()" title="Recargar estado de sucursales">
-                        🔄 Refrescar
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#refresh"></use></svg> Refrescar
                     </button>
                     <?php endif; ?>
                 </div>
@@ -78,7 +80,7 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
             <!-- Grid de Tarjetas de Sucursales -->
             <div id="grid-sucursales-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 1.5rem;">
                 <div style="grid-column: 1/-1; text-align: center; color: var(--color-text-muted); padding: 4rem 1rem; background: var(--color-surface); border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
-                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">⏳</div>
+
                     <div>Cargando estado de sucursales...</div>
                 </div>
             </div>
@@ -92,7 +94,7 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
             <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.25rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 0.8rem 1.25rem;">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
                     <button class="btn" onclick="Encargado.volverASucursales()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 600; padding: 0.5rem 1rem;">
-                        <span>←</span> Volver a Sucursales
+                        <span><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#arrow-left"></use></svg></span> Volver a Sucursales
                     </button>
                     <div style="height: 24px; width: 1px; background: var(--color-border);"></div>
                     <div>
@@ -101,26 +103,26 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
                     </div>
                 </div>
                 <div style="display: flex; gap: 0.6rem; align-items: center;">
-                    <span id="detalle-turno-badge" style="padding: 0.35rem 0.8rem; border-radius: var(--radius-full); font-size: 0.8rem; font-weight: 700;">🟢 Turno Abierto</span>
+                    <span id="detalle-turno-badge" style="padding: 0.35rem 0.8rem; border-radius: var(--radius-full); font-size: 0.8rem; font-weight: 700;">Turno Abierto</span>
                 </div>
             </div>
 
             <!-- KPI Grid de la Sucursal -->
             <div class="kpi-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
                 <div class="kpi-card" style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1.25rem;">
-                    <div style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.25rem;">📦 Total Unidades en Stock</div>
+                    <div style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.25rem;">Total Unidades en Stock</div>
                     <div id="kpi-stock-total" style="font-size: 1.8rem; font-weight: 800; color: var(--color-text);">0</div>
                 </div>
                 <div class="kpi-card" style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1.25rem;">
-                    <div style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.25rem;">⚠️ Alerta Stock Bajo</div>
-                    <div id="kpi-stock-bajo" style="font-size: 1.8rem; font-weight: 800; color: var(--color-primary);">0</div>
+                    <div style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.25rem;">Alerta Stock Bajo</div>
+                    <div id="kpi-stock-bajo" style="font-size: 1.8rem; font-weight: 800; color:var(--color-primary-ink);">0</div>
                 </div>
                 <div class="kpi-card" style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1.25rem;">
-                    <div style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.25rem;">⛔ Productos Agotados</div>
+                    <div style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.25rem;">Productos Agotados</div>
                     <div id="kpi-stock-agotado" style="font-size: 1.8rem; font-weight: 800; color: var(--color-danger);">0</div>
                 </div>
                 <div class="kpi-card" style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1.25rem;">
-                    <div style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.25rem;">📊 Ventas del Día (Sucursal)</div>
+                    <div style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.25rem;">Ventas del Día (Sucursal)</div>
                     <div id="kpi-ventas-dia" style="font-size: 1.8rem; font-weight: 800; color: var(--color-success);">Bs. 0.00</div>
                 </div>
             </div>
@@ -129,52 +131,52 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
             <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.25rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1rem;">
                 <div style="display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center;">
                     <button class="btn btn--primary" onclick="Encargado.abrirModalStockDiario()" style="font-size: 0.92rem; font-weight: 700; padding: 0.55rem 1.1rem; background: #e07a14; border-color: #d16b08;" title="Cargar lote predeterminado matutino de salteñas">
-                        ⚡ Horneada Diaria
+                        Horneada Diaria
                     </button>
                     <button class="btn" onclick="Encargado.abrirModalLote()" style="font-size: 0.9rem; padding: 0.55rem 1rem;">
-                        🚚 Ingresar Lote
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#truck"></use></svg> Ingresar Lote
                     </button>
                     <button class="btn" onclick="Encargado.ejecutarCierreMerma()" style="font-size: 0.9rem; padding: 0.55rem 0.9rem;" title="Cerrar salteñas del día y registrar sobrante como merma">
-                        🌇 Merma Cierre
+                        Merma Cierre
                     </button>
                     <button class="btn" onclick="Encargado.abrirModalMovimientos()" style="font-size: 0.9rem;">
-                        📜 Movimientos
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#history"></use></svg> Movimientos
                     </button>
                     <button class="btn" onclick="Encargado.recargarSucursalActual()" title="Actualizar datos">
-                        🔄
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#refresh"></use></svg>
                     </button>
                 </div>
                 <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
                     <!-- Filtro por Tipo de Rotación (Diaria vs Lenta) -->
                     <div style="display: flex; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 2px;">
-                        <button id="btn-filtro-todos" class="btn" style="padding: 0.35rem 0.7rem; font-size: 0.8rem; background: var(--color-primary); color: #fff; border-radius: var(--radius-sm);" onclick="Encargado.filtrarRotacion('todos')">
-                            📦 Todos
+                        <button id="btn-filtro-todos" class="btn" style="padding: 0.35rem 0.7rem; font-size: 0.8rem; background: var(--color-primary); color: var(--color-on-primary); border-radius: var(--radius-sm);" onclick="Encargado.filtrarRotacion('todos')">
+                            Todos
                         </button>
                         <button id="btn-filtro-diaria" class="btn" style="padding: 0.35rem 0.7rem; font-size: 0.8rem; background: transparent; color: var(--color-text-muted); border-radius: var(--radius-sm);" onclick="Encargado.filtrarRotacion('diaria')">
-                            🥟 Diarios (Salteñas)
+                            Diarios (Salteñas)
                         </button>
                         <button id="btn-filtro-lenta" class="btn" style="padding: 0.35rem 0.7rem; font-size: 0.8rem; background: transparent; color: var(--color-text-muted); border-radius: var(--radius-sm);" onclick="Encargado.filtrarRotacion('lenta')">
-                            🥤 Lentos (Bebidas)
+                            Lentos (Bebidas)
                         </button>
                     </div>
 
                     <!-- Conmutador de vista Tarjetas vs Tabla -->
                     <div style="display: flex; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 2px;">
-                        <button id="btn-vista-cards" class="btn" style="padding: 0.35rem 0.7rem; font-size: 0.8rem; background: var(--color-primary); color: #fff; border-radius: var(--radius-sm);" onclick="Encargado.cambiarModoVista('cards')">
-                            🎴 Tarjetas
+                        <button id="btn-vista-cards" class="btn" style="padding: 0.35rem 0.7rem; font-size: 0.8rem; background: var(--color-primary); color: var(--color-on-primary); border-radius: var(--radius-sm);" onclick="Encargado.cambiarModoVista('cards')">
+                            Tarjetas
                         </button>
                         <button id="btn-vista-tabla" class="btn" style="padding: 0.35rem 0.7rem; font-size: 0.8rem; background: transparent; color: var(--color-text-muted); border-radius: var(--radius-sm);" onclick="Encargado.cambiarModoVista('tabla')">
-                            📋 Tabla
+                            Tabla
                         </button>
                     </div>
-                    <input type="text" id="buscador-stock" placeholder="🔍 Buscar producto..." style="background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0.45rem 0.75rem; color: var(--color-text); width: 180px;" oninput="Encargado.filtrarTabla()">
+                    <input type="text" id="buscador-stock" placeholder="Buscar producto..." style="background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0.45rem 0.75rem; color: var(--color-text); width: 180px;" oninput="Encargado.filtrarTabla()">
                 </div>
             </div>
 
             <!-- VISTA DE TARJETAS (Predeterminada) -->
             <div id="cards-stock-wrap" style="margin-bottom: 1.5rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--color-text);">📦 Catálogo de Productos — Haz clic en una tarjeta para editar precio o stock</h3>
+                    <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--color-text);">Catálogo de Productos — Haz clic en una tarjeta para editar precio o stock</h3>
                     <span id="contador-productos-cards" style="font-size: 0.85rem; color: var(--color-text-muted);">0 productos</span>
                 </div>
                 <div id="cards-stock-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.2rem;">
@@ -185,7 +187,7 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
             <!-- VISTA DE TABLA (Secundaria) -->
             <div id="tabla-stock-wrap" class="admin-table-wrap" style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; display: none;">
                 <div class="admin-table-wrap__header" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; background: var(--color-surface-2); font-weight: 700;">
-                    <span>📦 Tabla Detallada de Inventario y Precios</span>
+                    <span>Tabla Detallada de Inventario y Precios</span>
                     <span id="contador-productos" style="font-size: 0.85rem; color: var(--color-text-muted);">0 productos</span>
                 </div>
                 <div class="admin-table-wrap__body" style="overflow-x: auto;">
@@ -217,9 +219,9 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
     <div class="modal" style="max-width: 750px; width: 90%;">
         <div class="modal__header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-border); padding-bottom: 0.75rem; margin-bottom: 1rem;">
             <h3 style="font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem;">
-                🚚 Ingreso de Mercadería / Horneada
+                <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#truck"></use></svg> Ingreso de Mercadería / Horneada
             </h3>
-            <button class="modal__close" onclick="Encargado.cerrarModalLote()" style="background: none; border: none; color: var(--color-text-muted); font-size: 1.3rem; cursor: pointer;">✕</button>
+            <button class="modal__close" aria-label="Cerrar" onclick="Encargado.cerrarModalLote()" style="background: none; border: none; color: var(--color-text-muted); font-size: 1.3rem; cursor: pointer;"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#x"></use></svg></button>
         </div>
         <div class="modal__body">
             <p style="font-size: 0.9rem; color: var(--color-text-muted); margin-bottom: 1rem;">
@@ -245,7 +247,7 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
             </div>
             <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
                 <button type="button" class="btn" onclick="Encargado.cerrarModalLote()">Cancelar</button>
-                <button type="button" class="btn btn--primary" onclick="Encargado.guardarLote()" id="btn-guardar-lote">💾 Confirmar e Ingresar Stock</button>
+                <button type="button" class="btn btn--primary" onclick="Encargado.guardarLote()" id="btn-guardar-lote"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#save"></use></svg> Confirmar e Ingresar Stock</button>
             </div>
         </div>
     </div>
@@ -256,22 +258,22 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
     <div class="modal" style="max-width: 540px; width: 92%;">
         <div class="modal__header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-border); padding-bottom: 0.75rem;">
             <div>
-                <h3 id="modal-ajuste-titulo" style="font-size: 1.15rem; font-weight: 700;">✏️ Editar Producto</h3>
+                <h3 id="modal-ajuste-titulo" style="font-size: 1.15rem; font-weight: 700;">Editar Producto</h3>
                 <div id="modal-ajuste-subtitulo" style="font-size: 0.8rem; color: var(--color-text-muted);">Stock actual: 0 unidades</div>
             </div>
-            <button class="modal__close" onclick="Encargado.cerrarModalAjuste()" style="background: none; border: none; color: var(--color-text-muted); font-size: 1.3rem; cursor: pointer;">✕</button>
+            <button class="modal__close" aria-label="Cerrar" onclick="Encargado.cerrarModalAjuste()" style="background: none; border: none; color: var(--color-text-muted); font-size: 1.3rem; cursor: pointer;"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#x"></use></svg></button>
         </div>
 
         <!-- Pestañas de Acción del Modal -->
         <div style="display: flex; border-bottom: 1px solid var(--color-border); background: var(--color-surface-2);">
-            <button id="tab-modal-precio" class="btn tab-modal-btn" onclick="Encargado.cambiarTabModal('precio')" style="flex: 1; border-radius: 0; padding: 0.65rem 0.5rem; font-size: 0.85rem; font-weight: 600; border-bottom: 2px solid var(--color-primary); color: var(--color-primary); background: transparent;">
-                💰 Ajustar Precio
+            <button id="tab-modal-precio" class="btn tab-modal-btn" onclick="Encargado.cambiarTabModal('precio')" style="flex: 1; border-radius: 0; padding: 0.65rem 0.5rem; font-size: 0.85rem; font-weight: 600; border-bottom: 2px solid var(--color-primary); color:var(--color-primary-ink); background: transparent;">
+                Ajustar Precio
             </button>
             <button id="tab-modal-ingreso" class="btn tab-modal-btn" onclick="Encargado.cambiarTabModal('ingreso')" style="flex: 1; border-radius: 0; padding: 0.65rem 0.5rem; font-size: 0.85rem; font-weight: 600; border-bottom: 2px solid transparent; color: var(--color-text-muted); background: transparent;">
-                🚚 Ingresar Stock
+                Ingresar Stock
             </button>
             <button id="tab-modal-historial" class="btn tab-modal-btn" onclick="Encargado.cambiarTabModal('historial')" style="flex: 1; border-radius: 0; padding: 0.65rem 0.5rem; font-size: 0.85rem; font-weight: 600; border-bottom: 2px solid transparent; color: var(--color-text-muted); background: transparent;">
-                📜 Historial
+                Historial
             </button>
         </div>
 
@@ -309,13 +311,13 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
                         <small style="font-size: 0.75rem; color: var(--color-text-muted);">Si lo pausas, el producto se oculta en el POS de tus cajeros.</small>
                     </div>
                     <select id="ajuste-disponible-select" style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 0.4rem 0.6rem; color: var(--color-text); font-size: 0.85rem; font-weight: 600;">
-                        <option value="1">🟢 Habilitado</option>
-                        <option value="0">⛔ Pausado</option>
+                        <option value="1">Habilitado</option>
+                        <option value="0">Pausado</option>
                     </select>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem;">
                     <button type="button" class="btn" onclick="Encargado.cerrarModalAjuste()">Cancelar</button>
-                    <button type="button" class="btn btn--primary" onclick="Encargado.guardarPrecioYAlerta()">💾 Guardar Parámetros</button>
+                    <button type="button" class="btn btn--primary" onclick="Encargado.guardarPrecioYAlerta()"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#save"></use></svg> Guardar Parámetros</button>
                 </div>
             </div>
 
@@ -323,7 +325,7 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
             <div id="panel-modal-ingreso" style="display: none;">
                 <div style="background: var(--color-surface-2); border-radius: var(--radius-md); padding: 0.8rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
                     <span style="font-size: 0.85rem; color: var(--color-text-muted);">Stock actual disponible:</span>
-                    <strong id="ingreso-stock-actual-label" style="font-size: 1.1rem; color: var(--color-primary);">0 unidades</strong>
+                    <strong id="ingreso-stock-actual-label" style="font-size: 1.1rem; color:var(--color-primary-ink);">0 unidades</strong>
                 </div>
                 <div class="form-group" style="margin-bottom: 1rem;">
                     <label style="display: block; font-size: 0.85rem; margin-bottom: 0.3rem;">Cantidad de unidades a ingresar:</label>
@@ -342,7 +344,7 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem;">
                     <button type="button" class="btn" onclick="Encargado.cerrarModalAjuste()">Cancelar</button>
-                    <button type="button" class="btn btn--primary" onclick="Encargado.guardarIngresoMercaderia()">📦 Sumar al Stock</button>
+                    <button type="button" class="btn btn--primary" onclick="Encargado.guardarIngresoMercaderia()"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#plus"></use></svg> Sumar al Stock</button>
                 </div>
             </div>
 
@@ -375,8 +377,8 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
 <div class="modal-overlay" id="modal-movimientos" style="display: none;">
     <div class="modal" style="max-width: 850px; width: 92%;">
         <div class="modal__header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-border); padding-bottom: 0.75rem; margin-bottom: 1rem;">
-            <h3 style="font-size: 1.2rem;">📜 Historial de Movimientos de Inventario</h3>
-            <button class="modal__close" onclick="Encargado.cerrarModalMovimientos()" style="background: none; border: none; color: var(--color-text-muted); font-size: 1.3rem; cursor: pointer;">✕</button>
+            <h3 style="font-size: 1.2rem;">Historial de Movimientos de Inventario</h3>
+            <button class="modal__close" aria-label="Cerrar" onclick="Encargado.cerrarModalMovimientos()" style="background: none; border: none; color: var(--color-text-muted); font-size: 1.3rem; cursor: pointer;"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#x"></use></svg></button>
         </div>
         <div class="modal__body">
             <div style="max-height: 420px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: var(--radius-md);">
@@ -405,9 +407,9 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
     <div class="modal" style="max-width: 680px; width: 92%;">
         <div class="modal__header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-border); padding-bottom: 0.75rem; margin-bottom: 1rem;">
             <h3 style="font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem;">
-                ⚡ Horneada Matutina — Apertura de Stock Diario
+                Horneada Matutina — Apertura de Stock Diario
             </h3>
-            <button class="modal__close" onclick="Encargado.cerrarModalStockDiario()" style="background: none; border: none; color: var(--color-text-muted); font-size: 1.3rem; cursor: pointer;">✕</button>
+            <button class="modal__close" aria-label="Cerrar" onclick="Encargado.cerrarModalStockDiario()" style="background: none; border: none; color: var(--color-text-muted); font-size: 1.3rem; cursor: pointer;"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#x"></use></svg></button>
         </div>
         <div class="modal__body">
             <p style="font-size: 0.88rem; color: var(--color-text-muted); margin-bottom: 1rem;">
@@ -429,12 +431,12 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <button type="button" class="btn" onclick="Encargado.restablecerPredeterminadosDiarios()" style="font-size: 0.82rem; color: var(--color-text-muted);">
-                    ↺ Restaurar plantilla base
+                    <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#refresh"></use></svg> Restaurar plantilla base
                 </button>
                 <div style="display: flex; gap: 0.5rem;">
                     <button type="button" class="btn" onclick="Encargado.cerrarModalStockDiario()">Cancelar</button>
                     <button type="button" class="btn btn--primary" onclick="Encargado.confirmarStockDiario()" id="btn-confirmar-stock-diario" style="background: #e07a14; border-color: #d16b08; font-weight: 700;">
-                        ⚡ Confirmar e Iniciar Jornada
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#check"></use></svg> Confirmar e Iniciar Jornada
                     </button>
                 </div>
             </div>

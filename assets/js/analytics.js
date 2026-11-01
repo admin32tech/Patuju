@@ -4,7 +4,7 @@
  * Implementa estrictamente el informe de integridad de datos (Fase_3.md):
  * 1. Actualización periódica cada 30 segundos sin WebSockets innecesarios.
  * 2. Regla Fundamental: Nunca reemplazar datos válidos por un error de red.
- * 3. Control de estados visuales: 🟢 Actualizado | 🟡 Actualizando | 🟠 Antiguo | 🔴 Error.
+ * 3. Control de estados visuales: Actualizado | Actualizando | Antiguo | Error.
  * 4. Control de respuestas fuera de orden mediante versiones de datos.
  * 5. Visualización mediante Chart.js (actualización mediante chart.update()).
  */
@@ -31,19 +31,19 @@ const AdminAnalytics = (() => {
 
     // ── Paleta de Colores Corporativa ───────────────────────────────────────
     const COLORES = {
-        primary:       '#f59e0b',
-        primaryAlpha:  'rgba(245, 158, 11, 0.75)',
-        primaryBg:     'rgba(245, 158, 11, 0.15)',
-        danger:        '#ef4444',
+        primary:       '#d9920c',
+        primaryAlpha:  'rgba(217, 146, 12, 0.8)',
+        primaryBg:     'rgba(217, 146, 12, 0.15)',
+        danger:        '#b42b2b',
         dangerAlpha:   'rgba(239, 68, 68, 0.75)',
-        success:       '#10b981',
+        success:       '#0b7a55',
         successAlpha:  'rgba(16, 185, 129, 0.75)',
-        info:          '#3b82f6',
+        info:          '#1d5fd1',
         infoAlpha:     'rgba(59, 130, 246, 0.75)',
         purple:        '#8b5cf6',
         purpleAlpha:   'rgba(139, 92, 246, 0.75)',
-        gridBorder:    'rgba(255, 255, 255, 0.08)',
-        textColor:     '#94a3b8'
+        gridBorder:    'rgba(35, 28, 16, 0.10)',
+        textColor:     '#5c5240'
     };
 
     // ── Inicialización del Módulo ───────────────────────────────────────────
@@ -57,7 +57,7 @@ const AdminAnalytics = (() => {
             return;
         }
 
-        // Configuración global de Chart.js para Dark Mode
+        // Configuración global de Chart.js para tema claro
         Chart.defaults.color = COLORES.textColor;
         Chart.defaults.font.family = 'system-ui, -apple-system, sans-serif';
 
@@ -313,18 +313,18 @@ const AdminAnalytics = (() => {
 
         if (estado === 'actualizando') {
             badge.className = 'badge-status status-updating';
-            badge.innerHTML = '🟡 Actualizando datos...';
+            badge.innerHTML = 'Actualizando datos...';
         } else if (estado === 'actualizado') {
             badge.className = 'badge-status status-ok';
-            badge.innerHTML = `🟢 Actualizado (${horaStr})`;
+            badge.innerHTML = `Actualizado (${horaStr})`;
         } else if (estado === 'antiguo') {
             badge.className = 'badge-status status-warning';
-            badge.innerHTML = `🟠 Datos antiguos (${horaStr})`;
+            badge.innerHTML = `Datos antiguos (${horaStr})`;
         } else if (estado === 'error') {
             badge.className = 'badge-status status-error';
             badge.innerHTML = horaStr
-                ? `🔴 Error de actualización (Último dato válido: ${horaStr})`
-                : `🔴 No se pudo conectar con el servidor`;
+                ? `Error de actualización (Último dato válido: ${horaStr})`
+                : `No se pudo conectar con el servidor`;
         }
     }
 

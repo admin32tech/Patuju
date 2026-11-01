@@ -64,6 +64,18 @@ if (!$db_connected || empty($sucursales)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        document.documentElement.classList.add('js');
+        window.addEventListener('load', function () {
+            setTimeout(function () {
+                if (!window.__revealReady) {
+                    document.querySelectorAll('.fade-in').forEach(function (el) {
+                        el.classList.add('appear');
+                    });
+                }
+            }, 1000);
+        });
+    </script>
     <title>PATUJU | La Mejor Salteña de Bolivia</title>
     <link rel="stylesheet" href="assets/css/landing.css">
 </head>
@@ -72,8 +84,8 @@ if (!$db_connected || empty($sucursales)) {
     <!-- Navbar -->
     <nav class="navbar">
         <div class="container">
-            <a href="#inicio" class="logo" aria-label="PATUJU, ir al inicio">🥟 PATUJU</a>
-            
+            <a href="#inicio" class="logo" aria-label="PATUJU, ir al inicio">PATUJU</a>
+
             <div class="nav-links" id="navLinks">
                 <a href="#inicio">Inicio</a>
                 <a href="#nosotros">Nosotros</a>
@@ -81,9 +93,9 @@ if (!$db_connected || empty($sucursales)) {
                 <a href="#sucursales">Sucursales</a>
                 <?php if (isset($_SESSION['usuario_id'])): ?>
                     <?php if ($_SESSION['usuario_rol'] === 'admin'): ?>
-                        <a href="admin.php" class="btn btn-primary" style="margin-left: 1rem;">⚙️ Admin</a>
+                        <a href="admin.php" class="btn btn-primary" style="margin-left: 1rem;">Admin</a>
                     <?php else: ?>
-                        <a href="index.php" class="btn btn-primary" style="margin-left: 1rem;">🧾 Ir a Caja</a>
+                        <a href="index.php" class="btn btn-primary" style="margin-left: 1rem;"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#cart"></use></svg> Ir a Caja</a>
                     <?php endif; ?>
                     <a href="logout.php" class="btn btn-outline" style="margin-left: 0.5rem; border-color: var(--color-danger); color: var(--color-danger);">Salir</a>
                 <?php else: ?>
@@ -92,7 +104,7 @@ if (!$db_connected || empty($sucursales)) {
             </div>
 
             <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Abrir menú" aria-controls="navLinks" aria-expanded="false">
-                ☰
+                <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#menu"></use></svg>
             </button>
         </div>
     </nav>
@@ -114,7 +126,7 @@ if (!$db_connected || empty($sucursales)) {
             <div class="hero-img fade-in" style="margin-top:2rem;text-align:center;">
                 <img src="assets/img/landing/hero_saltenas.svg"
                      alt="Salteñas Patuju — Tradición Boliviana"
-                     style="max-width:480px;width:100%;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+                     style="max-width:480px;width:100%;border-radius:12px;box-shadow:0 10px 30px rgba(60,45,10,0.18);">
             </div>
         </div>
     </section>
@@ -127,7 +139,7 @@ if (!$db_connected || empty($sucursales)) {
                     <h2>Nuestra <span>Historia</span></h2>
                     <p>Más de 25 años llevando el sabor de la salteña boliviana a cada rincón del país. Nuestro compromiso es mantener la receta tradicional que ha enamorado a generaciones.</p>
                     <p>Seleccionamos cuidadosamente cada ingrediente para garantizar la jugosidad, el equilibrio perfecto de sabores y esa masa horneada crujiente que nos caracteriza.</p>
-                    
+
                     <div class="stats">
                         <div class="stat-item">
                             <h4>15</h4>
@@ -158,36 +170,36 @@ if (!$db_connected || empty($sucursales)) {
     <section id="productos" style="background-color: var(--color-surface-2);">
         <div class="container">
             <h2 class="fade-in">Nuestros <span>Productos</span></h2>
-            
+
             <div class="productos-grid">
                 <div class="producto-card fade-in">
                     <img src="assets/img/landing/producto_saltena.svg" alt="Salteña de Carne" class="producto-img">
                     <div class="producto-info">
-                        <h3>🥟 Salteña de Carne</h3>
+                        <h3>Salteña de Carne</h3>
                         <p>La clásica salteña boliviana con jigote de carne de res</p>
                     </div>
                 </div>
-                
+
                 <div class="producto-card fade-in" style="transition-delay: 0.1s;">
                     <img src="assets/img/landing/producto_saltena.svg" alt="Salteña de Pollo" class="producto-img">
                     <div class="producto-info">
-                        <h3>🥟 Salteña de Pollo</h3>
+                        <h3>Salteña de Pollo</h3>
                         <p>Salteña jugosa de pollo, la favorita de todos</p>
                     </div>
                 </div>
-                
+
                 <div class="producto-card fade-in" style="transition-delay: 0.2s;">
                     <img src="assets/img/landing/producto_tucumana.svg" alt="Tucumanas" class="producto-img">
                     <div class="producto-info">
-                        <h3>🥟 Tucumanas</h3>
+                        <h3>Tucumanas</h3>
                         <p>Crujientes tucumanas fritas, perfectas para acompañar</p>
                     </div>
                 </div>
-                
+
                 <div class="producto-card fade-in" style="transition-delay: 0.3s;">
                     <img src="assets/img/landing/producto_jugo.svg" alt="Jugos Naturales" class="producto-img">
                     <div class="producto-info">
-                        <h3>🍊 Jugos Naturales</h3>
+                        <h3>Jugos Naturales</h3>
                         <p>Jugos frescos de frutas tropicales bolivianas</p>
                     </div>
                 </div>
@@ -199,12 +211,12 @@ if (!$db_connected || empty($sucursales)) {
     <section id="sucursales">
         <div class="container">
             <h2 class="fade-in">Nuestras <span>15 Sucursales</span></h2>
-            
+
             <div class="sucursales-grid">
                 <?php foreach($sucursales as $index => $sucursal): ?>
                 <div class="sucursal-card fade-in" style="transition-delay: <?php echo ($index % 3) * 0.1; ?>s;">
                     <div class="sucursal-header">
-                        <div class="sucursal-icon">📍</div>
+                        <div class="sucursal-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#pin"></use></svg></div>
                         <div>
                             <h3 style="font-size: 1.1rem; margin-bottom: 0.2rem;"><?php echo htmlspecialchars($sucursal['nombre']); ?></h3>
                         </div>
@@ -225,10 +237,10 @@ if (!$db_connected || empty($sucursales)) {
         <div class="container">
             <div class="footer-grid">
                 <div class="footer-col">
-                    <a href="#" class="logo" style="margin-bottom: 1rem;" aria-label="PATUJU, ir al inicio">🥟 PATUJU</a>
+                    <a href="#" class="logo" style="margin-bottom: 1rem;" aria-label="PATUJU, ir al inicio">PATUJU</a>
                     <p>Tradición, sabor y calidad desde 1995. La mejor salteña de Bolivia, horneada diariamente para ti.</p>
                 </div>
-                
+
                 <div class="footer-col">
                     <h4>Enlaces Rápidos</h4>
                     <ul class="footer-links">
@@ -238,7 +250,7 @@ if (!$db_connected || empty($sucursales)) {
                         <li><a href="#sucursales">Sucursales</a></li>
                     </ul>
                 </div>
-                
+
                 <div class="footer-col">
                     <h4>Contacto</h4>
                     <p>Av. 6 de Agosto #1234<br>La Paz, Bolivia</p>
@@ -246,7 +258,7 @@ if (!$db_connected || empty($sucursales)) {
                     <p>Email: info@patuju.com.bo</p>
                 </div>
             </div>
-            
+
             <div class="footer-bottom">
                 &copy; <?= date('Y') ?> Patuju — Todos los derechos reservados.
             </div>
@@ -258,7 +270,7 @@ if (!$db_connected || empty($sucursales)) {
         // Mobile Menu
         const mobileBtn = document.getElementById('mobileMenuBtn');
         const navLinks = document.getElementById('navLinks');
-        
+
         mobileBtn.addEventListener('click', () => {
             const abierto = navLinks.classList.toggle('active');
             mobileBtn.setAttribute('aria-expanded', abierto ? 'true' : 'false');
@@ -277,23 +289,32 @@ if (!$db_connected || empty($sucursales)) {
         });
 
         // Intersection Observer for Animations
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: "0px 0px -50px 0px"
-        };
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const fadeEls = document.querySelectorAll('.fade-in');
 
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('appear');
-                    observer.unobserve(entry.target);
-                }
+        if (!('IntersectionObserver' in window) || reduceMotion) {
+            fadeEls.forEach(element => element.classList.add('appear'));
+        } else {
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: "0px 0px -50px 0px"
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('appear');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+
+            fadeEls.forEach(element => {
+                observer.observe(element);
             });
-        }, observerOptions);
+        }
 
-        document.querySelectorAll('.fade-in').forEach(element => {
-            observer.observe(element);
-        });
+        window.__revealReady = true;
     </script>
 </body>
 </html>

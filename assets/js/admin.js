@@ -21,6 +21,9 @@ const Admin = (() => {
             .replace(/'/g, '&#039;');
     }
 
+    // Iconos SVG del sprite local
+    const svgIcon = (name) => `<svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#${name}"></use></svg>`;
+
     function init() {
         cargarProductos();
         const form = $('#admin-form');
@@ -52,8 +55,20 @@ const Admin = (() => {
     }
 
     // ── Cambio de Pestañas ─────────────────────
+    const TITULOS_TAB = {
+        'productos': ['Catálogo de productos', 'Crea, edita y desactiva los productos que se venden en todas las sucursales.'],
+        'stock': ['Stock por sucursal', 'Ajusta existencias, alertas mínimas y precios locales de cada sede.'],
+        'auditoria-ventas': ['Auditoría de ventas', 'Revisa quién vendió qué, cuándo y en qué sucursal.'],
+        'auditoria-turnos': ['Cierres de turno', 'Compara lo que dice el sistema con el monto contado en cada corte Z.'],
+        'analytics': ['Analítica', 'Ventas, horarios pico y productos líderes de toda la red.']
+    };
+
     function cambiarTab(tab) {
         tabActual = tab;
+        const [titulo, descripcion] = TITULOS_TAB[tab] || ['', ''];
+        const h1 = $('#admin-titulo'), p = $('#admin-descripcion');
+        if (h1) h1.textContent = titulo;
+        if (p) p.textContent = descripcion;
 
         // Actualizar botones
         document.querySelectorAll('.btn-tab').forEach(btn => btn.classList.remove('active'));
@@ -130,7 +145,7 @@ const Admin = (() => {
                     <td><strong>#${p.id}</strong></td>
                     <td>
                         <div class="admin-prod-cell">
-                            <span class="admin-prod-icon">🥟</span>
+
                             <div>
                                 <div class="admin-prod-name">${escapeHtml(p.nombre)}</div>
                                 <div class="admin-prod-desc">${escapeHtml(p.descripcion || '')}</div>
@@ -142,10 +157,10 @@ const Admin = (() => {
                     <td><span class="badge ${badgeClass}">${badgeText}</span></td>
                     <td>
                         <div class="admin-actions">
-                            <button class="btn btn--sm" data-action="editar" data-id="${p.id}" title="Editar" aria-label="Editar ${escapeHtml(p.nombre)}">✏️</button>
-                            ${activo 
-                                ? `<button class="btn btn--sm btn--danger" data-action="desactivar" data-id="${p.id}" title="Desactivar" aria-label="Desactivar ${escapeHtml(p.nombre)}">🗑️</button>`
-                                : `<button class="btn btn--sm" data-action="activar" data-id="${p.id}" title="Reactivar" aria-label="Reactivar ${escapeHtml(p.nombre)}">♻️</button>`
+                            <button class="btn btn--sm" data-action="editar" data-id="${p.id}" title="Editar" aria-label="Editar ${escapeHtml(p.nombre)}"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#pencil"></use></svg></button>
+                            ${activo
+                                ? `<button class="btn btn--sm btn--danger" data-action="desactivar" data-id="${p.id}" title="Desactivar" aria-label="Desactivar ${escapeHtml(p.nombre)}"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#trash"></use></svg></button>`
+                                : `<button class="btn btn--sm" data-action="activar" data-id="${p.id}" title="Reactivar" aria-label="Reactivar ${escapeHtml(p.nombre)}"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#refresh"></use></svg></button>`
                             }
                         </div>
                     </td>
@@ -180,7 +195,7 @@ const Admin = (() => {
 
         const btnSubmit = $('#admin-form-submit');
         btnSubmit.disabled = true;
-        btnSubmit.textContent = 'Guardando...';
+            btnSubmit.innerHTML = svgIcon('save') + ' Guardando...';
 
         try {
             let res;
@@ -212,28 +227,28 @@ const Admin = (() => {
             alert('Error de conexión');
         } finally {
             btnSubmit.disabled = false;
-            btnSubmit.textContent = editandoId ? '💾 Actualizar' : '💾 Guardar';
+            btnSubmit.innerHTML = svgIcon('save') + (editandoId ? ' Actualizar' : ' Guardar');
         }
     }
 
     function editarProducto(id, nombre, precio, categoriaId, imagen, descripcion) {
         editandoId = id;
-        $('#admin-form-title').textContent = `✏️ Editar Producto #${id}`;
+        $('#admin-form-title').textContent = `Editar Producto #${id}`;
         $('#prod-nombre').value = nombre;
         $('#prod-precio').value = precio;
         $('#prod-categoria').value = categoriaId;
         $('#prod-imagen').value = imagen;
         $('#prod-descripcion').value = descripcion;
-        $('#admin-form-submit').textContent = '💾 Actualizar';
+        $('#admin-form-submit').innerHTML = svgIcon('save') + ' Actualizar';
         $('#admin-form-cancel').style.display = 'inline-flex';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     }
 
     function limpiarFormulario() {
         editandoId = null;
         $('#admin-form').reset();
-        $('#admin-form-title').textContent = '➕ Nuevo Producto';
-        $('#admin-form-submit').textContent = '💾 Guardar';
+        $('#admin-form-title').textContent = 'Nuevo Producto';
+        $('#admin-form-submit').innerHTML = svgIcon('save') + ' Guardar';
         $('#admin-form-cancel').style.display = 'none';
     }
 
@@ -309,14 +324,14 @@ const Admin = (() => {
         const titulo = $('#stock-table-titulo');
         if (titulo && sel) {
             const textoSuc = sel.options[sel.selectedIndex]?.text || 'Todas las Sedes';
-            titulo.textContent = `🏬 Control de Inventario: ${textoSuc}`;
+            titulo.textContent = `Control de Inventario: ${textoSuc}`;
         }
 
         cargarStockSucursal();
 
         const tableWrap = document.querySelector('.admin-table-wrap');
         if (tableWrap) {
-            tableWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            tableWrap.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
         }
     }
 
@@ -374,30 +389,30 @@ const Admin = (() => {
             const alerta = parseInt(s.alerta_minima, 10) || 10;
             const precioBase = parseFloat(s.precio_base || 0).toFixed(2);
             const precioEf = parseFloat(s.precio_efectivo || s.precio_base || 0).toFixed(2);
-            const precioLocalVal = (s.precio_sucursal !== null && s.precio_sucursal !== undefined && s.precio_sucursal !== '') 
-                ? parseFloat(s.precio_sucursal).toFixed(2) 
+            const precioLocalVal = (s.precio_sucursal !== null && s.precio_sucursal !== undefined && s.precio_sucursal !== '')
+                ? parseFloat(s.precio_sucursal).toFixed(2)
                 : '';
             const rowKey = `${s.sucursal_id}_${s.producto_id}`;
 
             let estado = '';
             if (cant === 0) {
-                estado = '<span class="badge" style="background:var(--color-danger-bg);color:var(--color-danger);font-weight:700;">⛔ AGOTADO</span>';
+                estado = '<span class="badge" style="background:var(--color-danger-bg);color:var(--color-danger);font-weight:700;">AGOTADO</span>';
             } else if (cant <= alerta) {
-                estado = '<span class="badge" style="background:rgba(240,160,48,0.15);color:var(--color-primary);font-weight:700;">⚠️ BAJO</span>';
+                estado = '<span class="badge" style="background:rgba(240,160,48,0.15);color:var(--color-primary-ink);font-weight:700;">BAJO</span>';
             } else {
-                estado = '<span class="badge" style="background:var(--color-success-bg);color:var(--color-success);font-weight:700;">✅ NORMAL</span>';
+                estado = '<span class="badge" style="background:var(--color-success-bg);color:var(--color-success);font-weight:700;">NORMAL</span>';
             }
 
             html += `
                 <tr id="row-stock-${rowKey}" data-sucursal-id="${s.sucursal_id}" data-producto-id="${s.producto_id}">
-                    <td><strong>📍 ${escapeHtml(s.sucursal_nombre)}</strong></td>
+                    <td><strong>${escapeHtml(s.sucursal_nombre)}</strong></td>
                     <td>
                         <div style="font-weight: 700; color: var(--color-text);">${escapeHtml(s.producto_nombre)}</div>
                         <small style="color:var(--color-text-muted);">Precio Catálogo: Bs. ${precioBase}</small>
                     </td>
                     <td><span class="badge">${escapeHtml(s.categoria_nombre || 'General')}</span></td>
                     <td style="text-align:center;">
-                        <input type="number" min="0" value="${cant}" 
+                        <input type="number" min="0" value="${cant}"
                                class="admin-input-stock"
                                data-row-key="${rowKey}"
                                data-sucursal-id="${s.sucursal_id}"
@@ -406,7 +421,7 @@ const Admin = (() => {
                                style="width: 80px; padding: 0.4rem; text-align: center; font-size: 1rem; font-weight: 700; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-text);">
                     </td>
                     <td style="text-align:center;">
-                        <input type="number" min="0" value="${alerta}" 
+                        <input type="number" min="0" value="${alerta}"
                                class="admin-input-alerta"
                                data-row-key="${rowKey}"
                                data-sucursal-id="${s.sucursal_id}"
@@ -417,8 +432,8 @@ const Admin = (() => {
                     <td style="text-align:center;">
                         <div style="display:flex;align-items:center;justify-content:center;gap:0.3rem;">
                             <span style="color:var(--color-text-muted);font-size:0.8rem;">Bs.</span>
-                            <input type="number" step="0.50" min="0" 
-                                   value="${precioLocalVal}" 
+                            <input type="number" step="0.50" min="0"
+                                   value="${precioLocalVal}"
                                    placeholder="${precioBase}"
                                    title="Precio específico para esta sede. Déjalo en blanco para usar el precio base (Bs. ${precioBase})"
                                    class="admin-input-precio"
@@ -428,13 +443,13 @@ const Admin = (() => {
                                    data-precio-base="${precioBase}"
                                    oninput="Admin.marcarFilaModificada('${rowKey}')"
                                    style="width: 85px; padding: 0.4rem; font-size: 0.95rem; font-weight: 600; text-align: right; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-text);">
-                            <button type="button" class="btn btn--sm" onclick="Admin.restablecerPrecioBase('${rowKey}')" title="Usar precio base general (${precioBase})" style="padding: 0.25rem 0.45rem; font-size: 0.75rem; color: var(--color-text-muted);">↺</button>
+                            <button type="button" class="btn btn--sm" aria-label="Usar precio base general" onclick="Admin.restablecerPrecioBase('${rowKey}')" title="Usar precio base general (${precioBase})" style="padding: 0.25rem 0.45rem; font-size: 0.75rem; color: var(--color-text-muted);"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#refresh"></use></svg></button>
                         </div>
                     </td>
                     <td style="text-align:center;">${estado}</td>
                     <td style="text-align:center;">
                         <button class="btn btn--sm btn--primary" id="btn-save-${rowKey}" onclick="Admin.guardarStockFila('${rowKey}', this)" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 600; width: 100%;">
-                            💾 Guardar
+                            Guardar
                         </button>
                     </td>
                 </tr>
@@ -452,7 +467,7 @@ const Admin = (() => {
         }
         const btnSave = $(`#btn-save-${rowKey}`);
         if (btnSave) {
-            btnSave.textContent = '💾 Guardar *';
+            btnSave.textContent = 'Guardar *';
             btnSave.classList.add('btn--warning');
         }
     }
@@ -491,10 +506,10 @@ const Admin = (() => {
             return;
         }
 
-        const originalText = btn ? btn.textContent : '💾 Guardar';
+        const originalText = btn ? btn.textContent : 'Guardar';
         if (btn) {
             btn.disabled = true;
-            btn.textContent = '⏳ Guardando...';
+            btn.textContent = 'Guardando...';
         }
 
         try {
@@ -515,8 +530,9 @@ const Admin = (() => {
             const data = await res.json();
             if (data.success) {
                 if (btn) {
-                    btn.textContent = '✅ Guardado';
+                    btn.textContent = 'Guardado';
                     btn.style.background = 'var(--color-success)';
+                    btn.style.color = '#fff';
                 }
                 row.style.background = 'transparent';
                 row.classList.remove('fila-modificada');
@@ -533,8 +549,9 @@ const Admin = (() => {
                 setTimeout(() => {
                     if (btn) {
                         btn.disabled = false;
-                        btn.textContent = '💾 Guardar';
+                        btn.textContent = 'Guardar';
                         btn.style.background = '';
+                        btn.style.color = '';
                         btn.classList.remove('btn--warning');
                     }
                 }, 2000);
@@ -565,7 +582,7 @@ const Admin = (() => {
         const btnGuardarTodo = $('#btn-guardar-todo-stock');
         if (btnGuardarTodo) {
             btnGuardarTodo.disabled = true;
-            btnGuardarTodo.textContent = `⏳ Guardando (${filasModificadas.length})...`;
+            btnGuardarTodo.innerHTML = svgIcon('save') + ` Guardando (${filasModificadas.length})...`;
         }
 
         let exito = 0;
@@ -607,7 +624,7 @@ const Admin = (() => {
                     fila.classList.remove('fila-modificada');
                     const btnSave = $(`#btn-save-${rowKey}`);
                     if (btnSave) {
-                        btnSave.textContent = '💾 Guardar';
+                        btnSave.textContent = 'Guardar';
                         btnSave.classList.remove('btn--warning');
                     }
                 } else {
@@ -620,14 +637,14 @@ const Admin = (() => {
 
         if (btnGuardarTodo) {
             btnGuardarTodo.disabled = false;
-            btnGuardarTodo.textContent = '💾 Guardar Todo';
+            btnGuardarTodo.innerHTML = svgIcon('save') + ' Guardar Todo';
         }
 
         if (errores === 0) {
-            alert(`✅ ${exito} producto(s) actualizados exitosamente.`);
+            alert(`${exito} producto(s) actualizados exitosamente.`);
             cargarStockSucursal();
         } else {
-            alert(`⚠️ Se guardaron ${exito} producto(s). Hubo ${errores} error(es).`);
+            alert(`Se guardaron ${exito} producto(s). Hubo ${errores} error(es).`);
         }
     }
 
@@ -680,22 +697,22 @@ const Admin = (() => {
 
             let metodoBadge = '';
             if (v.metodo_pago === 'efectivo') {
-                metodoBadge = '<span class="badge" style="background:var(--color-success-bg);color:var(--color-success);">💵 Efectivo</span>';
+                metodoBadge = '<span class="badge" style="background:var(--color-success-bg);color:var(--color-success);">Efectivo</span>';
             } else if (v.metodo_pago === 'qr') {
-                metodoBadge = '<span class="badge" style="background:rgba(96,165,250,0.15);color:var(--color-info);">📱 QR</span>';
+                metodoBadge = '<span class="badge" style="background:rgba(96,165,250,0.15);color:var(--color-info);">QR</span>';
             } else {
-                metodoBadge = '<span class="badge" style="background:rgba(240,160,48,0.15);color:var(--color-primary);">💳 Tarjeta</span>';
+                metodoBadge = '<span class="badge" style="background:rgba(240,160,48,0.15);color:var(--color-primary-ink);">Tarjeta</span>';
             }
 
             html += `
                 <tr>
                     <td><strong>#${v.id}</strong></td>
                     <td style="font-size:0.85rem;color:var(--color-text-muted);">${escapeHtml(v.fecha)}</td>
-                    <td><strong>📍 ${escapeHtml(v.sucursal_nombre)}</strong></td>
-                    <td>👤 ${escapeHtml(v.cajero_nombre)}</td>
+                    <td><strong>${escapeHtml(v.sucursal_nombre)}</strong></td>
+                    <td>${escapeHtml(v.cajero_nombre)}</td>
                     <td style="font-size:0.85rem;max-width:320px;">${detalleStr}</td>
                     <td>${metodoBadge}</td>
-                    <td style="text-align:right;font-size:1.05rem;font-weight:700;color:var(--color-primary);">
+                    <td style="text-align:right;font-size:1.05rem;font-weight:700;color:var(--color-primary-ink);">
                         Bs. ${v.total}
                     </td>
                 </tr>
@@ -752,28 +769,28 @@ const Admin = (() => {
 
             let cuadreBadge = '';
             if (!esCerrado) {
-                cuadreBadge = '<span class="badge" style="background:rgba(96,165,250,0.15);color:var(--color-info);">🔵 Turno Abierto</span>';
+                cuadreBadge = '<span class="badge" style="background:rgba(96,165,250,0.15);color:var(--color-info);">Turno Abierto</span>';
             } else if (dif === 0) {
-                cuadreBadge = '<span class="badge" style="background:var(--color-success-bg);color:var(--color-success);">✅ Cuadrado (0.00)</span>';
+                cuadreBadge = '<span class="badge" style="background:var(--color-success-bg);color:var(--color-success);">Cuadrado (0.00)</span>';
             } else if (dif > 0) {
-                cuadreBadge = `<span class="badge" style="background:rgba(52,211,153,0.15);color:var(--color-success);">➕ Sobrante (+${dif.toFixed(2)})</span>`;
+                cuadreBadge = `<span class="badge" style="background:rgba(52,211,153,0.15);color:var(--color-success);">Sobrante (+${dif.toFixed(2)})</span>`;
             } else {
-                cuadreBadge = `<span class="badge" style="background:var(--color-danger-bg);color:var(--color-danger);">⚠️ Faltante (${dif.toFixed(2)})</span>`;
+                cuadreBadge = `<span class="badge" style="background:var(--color-danger-bg);color:var(--color-danger);">Faltante (${dif.toFixed(2)})</span>`;
             }
 
             html += `
                 <tr>
                     <td><strong>#${t.id}</strong></td>
                     <td>
-                        <strong>📍 ${escapeHtml(t.sucursal_nombre)}</strong><br>
-                        <small style="color:var(--color-text-muted);">👤 ${escapeHtml(t.cajero_nombre)}</small>
+                        <strong>${escapeHtml(t.sucursal_nombre)}</strong><br>
+                        <small style="color:var(--color-text-muted);">${escapeHtml(t.cajero_nombre)}</small>
                     </td>
                     <td style="font-size:0.8rem;color:var(--color-text-muted);">
                         Apertura: ${escapeHtml(t.hora_apertura)}<br>
                         Cierre: ${t.hora_cierre ? escapeHtml(t.hora_cierre) : '<em style="color:var(--color-info);">En curso</em>'}
                     </td>
                     <td style="text-align:right;">Bs. ${parseFloat(t.monto_apertura).toFixed(2)}</td>
-                    <td style="text-align:right;color:var(--color-primary);font-weight:600;">
+                    <td style="text-align:right;color:var(--color-primary-ink);font-weight:600;">
                         ${t.ventas_sistema !== null ? 'Bs. ' + parseFloat(t.ventas_sistema).toFixed(2) : '—'}
                     </td>
                     <td style="text-align:right;color:var(--color-danger);">
@@ -824,7 +841,7 @@ const Admin = (() => {
                     const badge = $('#sync-badge');
                     if (badge) {
                         const hora = new Date().toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' });
-                        badge.textContent = `🟢 Actualizado ${hora}`;
+                        badge.textContent = `Actualizado ${hora}`;
                     }
                 }
             } catch (err) {

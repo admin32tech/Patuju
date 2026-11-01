@@ -33,14 +33,14 @@ if (isset($_SESSION['usuario_id'])) {
             padding: 2rem;
             background: var(--color-surface);
             border-radius: var(--radius-lg);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-            border: 1px solid var(--color-surface-2);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--color-border);
             text-align: center;
         }
         .login-logo {
             font-size: 2rem;
             font-weight: 700;
-            color: var(--color-primary);
+            color: var(--color-primary-ink);
             margin-bottom: 0.5rem;
         }
         .login-subtitle {
@@ -67,20 +67,21 @@ if (isset($_SESSION['usuario_id'])) {
         .form-group input {
             padding: 0.75rem 1rem;
             background: var(--color-surface-2);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--color-border);
             border-radius: var(--radius-md);
             color: var(--color-text);
             font-family: inherit;
             font-size: 1rem;
-            transition: border-color 0.2s;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
         .form-group input:focus {
             outline: none;
-            border-color: var(--color-primary);
+            border-color: var(--color-primary-ink);
+            box-shadow: var(--shadow-glow);
         }
         .btn-login {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-            color: #fff;
+            background: linear-gradient(135deg, var(--color-primary), #d98f0f);
+            color: var(--color-on-primary);
             padding: 0.875rem;
             border: none;
             border-radius: var(--radius-md);
@@ -99,7 +100,7 @@ if (isset($_SESSION['usuario_id'])) {
         }
         .error-message {
             color: var(--color-danger);
-            background: rgba(239, 68, 68, 0.1);
+            background: var(--color-danger-bg);
             padding: 0.75rem;
             border-radius: var(--radius-md);
             font-size: 0.85rem;
@@ -115,17 +116,17 @@ if (isset($_SESSION['usuario_id'])) {
             transition: color 0.2s;
         }
         .back-link:hover {
-            color: var(--color-primary);
+            color: var(--color-primary-ink);
         }
     </style>
 </head>
 <body>
     <div class="login-container">
-        <div class="login-logo">🥟 PATUJU POS</div>
+        <div class="login-logo">PATUJU POS</div>
         <div class="login-subtitle">Ingresa a tu sucursal</div>
-        
+
         <div id="error-message" class="error-message"></div>
-        
+
         <form id="login-form" class="login-form">
             <div class="form-group">
                 <label for="username">Usuario</label>
@@ -137,8 +138,8 @@ if (isset($_SESSION['usuario_id'])) {
             </div>
             <button type="submit" class="btn-login" id="btn-submit">Iniciar Sesión</button>
         </form>
-        
-        <a href="landing.php" class="back-link">← Volver al inicio</a>
+
+        <a href="landing.php" class="back-link"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#arrow-left"></use></svg> Volver al inicio</a>
     </div>
 
     <script>
@@ -157,17 +158,17 @@ if (isset($_SESSION['usuario_id'])) {
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const form = e.target;
             const btnSubmit = document.getElementById('btn-submit');
             const errorDiv = document.getElementById('error-message');
             const username = form.username.value.trim();
             const password = form.password.value;
-            
+
             btnSubmit.disabled = true;
             btnSubmit.textContent = 'Verificando...';
             errorDiv.style.display = 'none';
-            
+
             try {
                 const response = await fetch('ajax/login.php', {
                     method: 'POST',
@@ -176,9 +177,9 @@ if (isset($_SESSION['usuario_id'])) {
                     },
                     body: JSON.stringify({ username, password })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
                     // Recordar último usuario para próximos accesos
                     localStorage.setItem('ultimo_usuario', username);

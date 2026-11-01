@@ -27,6 +27,9 @@ const Encargado = (() => {
             .replace(/'/g, '&#039;');
     }
 
+    // Iconos SVG del sprite local
+    const svgIcon = (name) => `<svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#${name}"></use></svg>`;
+
     function init() {
         iniciarReloj();
         cargarResumenSucursales();
@@ -55,7 +58,7 @@ const Encargado = (() => {
         if (container) {
             container.innerHTML = `
                 <div style="grid-column: 1/-1; text-align: center; color: var(--color-text-muted); padding: 4rem 1rem; background: var(--color-surface); border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
-                    <div style="font-size: 2.2rem; margin-bottom: 0.6rem;">⏳</div>
+
                     <div style="font-weight: 600;">Cargando estado de sucursales...</div>
                 </div>
             `;
@@ -100,7 +103,7 @@ const Encargado = (() => {
         if (sucursalesUnicas.length === 0) {
             container.innerHTML = `
                 <div style="grid-column: 1/-1; text-align: center; color: var(--color-text-muted); padding: 4rem 1rem; background: var(--color-surface); border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
-                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🏬</div>
+
                     <div>No hay sucursales asignadas a este usuario.</div>
                 </div>
             `;
@@ -123,10 +126,10 @@ const Encargado = (() => {
             let alertBadge = '';
             if (agotado > 0) {
                 cardBorder = 'border: 1px solid rgba(239, 68, 68, 0.4);';
-                alertBadge = '<span style="background: var(--color-danger-bg); color: var(--color-danger); font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: var(--radius-full);">⛔ ' + agotado + ' agotados</span>';
+                alertBadge = '<span style="background: var(--color-danger-bg); color: var(--color-danger); font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: var(--radius-full);">' + agotado + ' agotados</span>';
             } else if (bajo > 0) {
                 cardBorder = 'border: 1px solid rgba(240, 160, 48, 0.4);';
-                alertBadge = '<span style="background: rgba(240, 160, 48, 0.15); color: var(--color-primary); font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: var(--radius-full);">⚠️ ' + bajo + ' con stock bajo</span>';
+                alertBadge = '<span style="background: rgba(240, 160, 48, 0.15); color:var(--color-primary-ink); font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: var(--radius-full);">' + bajo + ' con stock bajo</span>';
             }
 
             html += `
@@ -135,23 +138,23 @@ const Encargado = (() => {
                         <!-- Encabezado de la Tarjeta con Código y Flecha -->
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
                             <div>
-                                <span style="font-size: 0.75rem; font-weight: 700; color: var(--color-primary); text-transform: uppercase; letter-spacing: 0.05em;">${escapeHtml(s.codigo || 'SUC')}</span>
+                                <span style="font-size: 0.75rem; font-weight: 700; color:var(--color-primary-ink); text-transform: uppercase; letter-spacing: 0.05em;">${escapeHtml(s.codigo || 'SUC')}</span>
                                 <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--color-text); margin-top: 0.2rem;">${escapeHtml(s.nombre)}</h3>
                             </div>
-                            <span style="font-size: 1.4rem; color: var(--color-primary); line-height: 1; transition: transform 0.2s ease;" class="arrow-icon">→</span>
+                            <span style="font-size: 1.4rem; color:var(--color-primary-ink); line-height: 1; transition: transform 0.2s ease;" class="arrow-icon">→</span>
                         </div>
 
                         <!-- Info Encargado y Fecha -->
                         <div style="display: flex; flex-wrap: wrap; gap: 0.5rem 1.2rem; margin-bottom: 1.1rem; font-size: 0.85rem; color: var(--color-text-muted); border-bottom: 1px solid var(--color-border); padding-bottom: 0.8rem;">
-                            <div>👤 <strong>Encargado:</strong> ${escapeHtml(s.encargado_nombre)}</div>
-                            <div>📅 <strong>Fecha:</strong> ${fechaStr}</div>
+                            <div><strong>Encargado:</strong> ${escapeHtml(s.encargado_nombre)}</div>
+                            <div><strong>Fecha:</strong> ${fechaStr}</div>
                         </div>
 
                         <!-- Resumen de Inventario (Estructura Solicitada) -->
                         <div style="background: var(--color-surface-2); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.1rem;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
                                 <strong style="font-size: 0.9rem; color: var(--color-text); display: flex; align-items: center; gap: 0.35rem;">
-                                    <span>📦</span> Inventario
+                                    <span><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#package"></use></svg></span> Inventario
                                 </strong>
                                 ${alertBadge}
                             </div>
@@ -161,17 +164,17 @@ const Encargado = (() => {
                                 <li style="color: ${bajo > 0 ? 'var(--color-primary)' : 'var(--color-text-muted)'};">• <strong>${bajo}</strong> con stock bajo</li>
                                 <li style="color: ${agotado > 0 ? 'var(--color-danger)' : 'var(--color-text-muted)'};">• <strong>${agotado}</strong> sin stock</li>
                             </ul>
-                            <div style="margin-top: 0.75rem; padding-top: 0.6rem; border-top: 1px solid rgba(255,255,255,0.06); font-size: 0.85rem; color: var(--color-text); font-weight: 600;">
-                                Total unidades en stock: <span style="color: var(--color-primary); font-size: 1.05rem;">${unidadesTotal} u.</span>
+                            <div style="margin-top: 0.75rem; padding-top: 0.6rem; border-top: 1px solid var(--color-border); font-size: 0.85rem; color: var(--color-text); font-weight: 600;">
+                                Total unidades en stock: <span style="color:var(--color-primary-ink); font-size: 1.05rem;">${unidadesTotal} u.</span>
                             </div>
                         </div>
 
                         <!-- Estado del Turno y Ventas -->
                         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; margin-bottom: 0.5rem;">
                             <div>
-                                ${turnoAbierto 
-                                    ? '<span style="color: var(--color-success); font-weight: 700;">🟢 Turno Abierto</span>' + (s.turno_cajero ? `<small style="display:block;color:var(--color-text-muted);">Cajero: ${escapeHtml(s.turno_cajero)}</small>` : '')
-                                    : '<span style="color: var(--color-text-muted); font-weight: 600;">⚪ Turno Cerrado</span>'}
+                                ${turnoAbierto
+                                    ? '<span style="color: var(--color-success); font-weight: 700;">Turno Abierto</span>' + (s.turno_cajero ? `<small style="display:block;color:var(--color-text-muted);">Cajero: ${escapeHtml(s.turno_cajero)}</small>` : '')
+                                    : '<span style="color: var(--color-text-muted); font-weight: 600;">Turno Cerrado</span>'}
                             </div>
                             <div style="text-align: right;">
                                 <span style="color: var(--color-text-muted);">Ventas hoy:</span>
@@ -236,11 +239,11 @@ const Encargado = (() => {
         const turnoBadge = $('#detalle-turno-badge');
         if (turnoBadge) {
             if (turnoEstado === 'abierto') {
-                turnoBadge.textContent = '🟢 Turno Abierto';
+                turnoBadge.textContent = 'Turno Abierto';
                 turnoBadge.style.background = 'var(--color-success-bg)';
                 turnoBadge.style.color = 'var(--color-success)';
             } else {
-                turnoBadge.textContent = '⚪ Turno Cerrado';
+                turnoBadge.textContent = 'Turno Cerrado';
                 turnoBadge.style.background = 'var(--color-surface-2)';
                 turnoBadge.style.color = 'var(--color-text-muted)';
             }
@@ -249,7 +252,7 @@ const Encargado = (() => {
         // Cargar inventario de esta sucursal
         cargarStockSucursal(id);
         cargarVentasDiaSucursal(id);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     }
 
     function volverASucursales() {
@@ -259,7 +262,7 @@ const Encargado = (() => {
         if (vSucursales) vSucursales.style.display = 'block';
 
         cargarResumenSucursales();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     }
 
     function recargarSucursalActual() {
@@ -344,12 +347,12 @@ const Encargado = (() => {
         if (modo === 'cards') {
             if (wrapCards) wrapCards.style.display = 'block';
             if (wrapTabla) wrapTabla.style.display = 'none';
-            if (btnCards) { btnCards.style.background = 'var(--color-primary)'; btnCards.style.color = '#fff'; }
+            if (btnCards) { btnCards.style.background = 'var(--color-primary)'; btnCards.style.color = 'var(--color-on-primary)'; }
             if (btnTabla) { btnTabla.style.background = 'transparent'; btnTabla.style.color = 'var(--color-text-muted)'; }
         } else {
             if (wrapCards) wrapCards.style.display = 'none';
             if (wrapTabla) wrapTabla.style.display = 'block';
-            if (btnTabla) { btnTabla.style.background = 'var(--color-primary)'; btnTabla.style.color = '#fff'; }
+            if (btnTabla) { btnTabla.style.background = 'var(--color-primary)'; btnTabla.style.color = 'var(--color-on-primary)'; }
             if (btnCards) { btnCards.style.background = 'transparent'; btnCards.style.color = 'var(--color-text-muted)'; }
         }
     }
@@ -369,7 +372,7 @@ const Encargado = (() => {
             if (!btn) return;
             if (k === tipo) {
                 btn.style.background = 'var(--color-primary)';
-                btn.style.color = '#fff';
+                btn.style.color = 'var(--color-on-primary)';
             } else {
                 btn.style.background = 'transparent';
                 btn.style.color = 'var(--color-text-muted)';
@@ -406,29 +409,28 @@ const Encargado = (() => {
             let estadoBadge = '';
             let borderStyle = 'border: 1px solid var(--color-border);';
             if (!estaDisponible) {
-                estadoBadge = '<span style="background: rgba(239, 68, 68, 0.2); color: var(--color-danger); padding: 0.25rem 0.6rem; border-radius: var(--radius-full); font-size: 0.72rem; font-weight: 700;">⛔ PAUSADO EN CAJA</span>';
+                estadoBadge = '<span style="background: rgba(239, 68, 68, 0.2); color: var(--color-danger); padding: 0.25rem 0.6rem; border-radius: var(--radius-full); font-size: 0.72rem; font-weight: 700;">PAUSADO EN CAJA</span>';
                 borderStyle = 'border: 1px dashed var(--color-danger); opacity: 0.85;';
             } else if (cant === 0) {
-                estadoBadge = '<span style="background: var(--color-danger-bg); color: var(--color-danger); padding: 0.25rem 0.6rem; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700;">⛔ AGOTADO</span>';
+                estadoBadge = '<span style="background: var(--color-danger-bg); color: var(--color-danger); padding: 0.25rem 0.6rem; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700;">AGOTADO</span>';
                 borderStyle = 'border: 1px solid var(--color-danger);';
             } else if (cant <= alerta) {
-                estadoBadge = '<span style="background: rgba(240, 160, 48, 0.15); color: var(--color-primary); padding: 0.25rem 0.6rem; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700;">⚠️ STOCK BAJO</span>';
+                estadoBadge = '<span style="background: rgba(240, 160, 48, 0.15); color:var(--color-primary-ink); padding: 0.25rem 0.6rem; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700;">STOCK BAJO</span>';
                 borderStyle = 'border: 1px solid var(--color-primary);';
             } else {
-                estadoBadge = '<span style="background: var(--color-success-bg); color: var(--color-success); padding: 0.25rem 0.6rem; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700;">✅ ÓPTIMO</span>';
+                estadoBadge = '<span style="background: var(--color-success-bg); color: var(--color-success); padding: 0.25rem 0.6rem; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700;">ÓPTIMO</span>';
             }
 
-            const rotacionBadge = esDiaria 
-                ? '<span style="background: rgba(224, 122, 20, 0.15); color: #e07a14; padding: 0.2rem 0.5rem; border-radius: var(--radius-full); font-size: 0.7rem; font-weight: 700;">🥟 Diaria</span>'
-                : '<span style="background: var(--color-surface-2); color: var(--color-text-muted); padding: 0.2rem 0.5rem; border-radius: var(--radius-full); font-size: 0.7rem; font-weight: 600;">🥤 Lenta</span>';
+            const rotacionBadge = esDiaria
+                ? '<span style="background: rgba(224, 122, 20, 0.15); color: #9c4a00; padding: 0.2rem 0.5rem; border-radius: var(--radius-full); font-size: 0.7rem; font-weight: 700;">Diaria</span>'
+                : '<span style="background: var(--color-surface-2); color: var(--color-text-muted); padding: 0.2rem 0.5rem; border-radius: var(--radius-full); font-size: 0.7rem; font-weight: 600;">Lenta</span>';
 
-            const iconoProd = esDiaria ? '🥟' : (p.categoria_nombre && p.categoria_nombre.toLowerCase().includes('jugo') ? '🍊' : '🥤');
 
             html += `
                 <div class="product-card-encargado" onclick="Encargado.abrirModalAjuste(${p.producto_id})" style="background: var(--color-surface); ${borderStyle} border-radius: var(--radius-lg); padding: 1.25rem; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; justify-content: space-between;">
                     <div>
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
-                            <span style="font-size: 2rem;">${iconoProd}</span>
+
                             <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem;">
                                 ${estadoBadge}
                                 ${rotacionBadge}
@@ -437,7 +439,7 @@ const Encargado = (() => {
                         <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--color-text); margin-bottom: 0.25rem;">${escapeHtml(p.producto_nombre)}</h4>
                         <div style="font-size: 0.8rem; color: var(--color-text-muted); margin-bottom: 0.8rem;">
                             ${escapeHtml(p.categoria_nombre || 'General')}
-                            ${esDiaria && stockPred > 0 ? ` • <span style="color: #e07a14; font-weight: 600;">Plantilla: ${stockPred} u.</span>` : ''}
+                            ${esDiaria && stockPred > 0 ? ` • <span style="color: #9c4a00; font-weight: 600;">Plantilla: ${stockPred} u.</span>` : ''}
                         </div>
                     </div>
 
@@ -449,15 +451,15 @@ const Encargado = (() => {
                         <div style="text-align: right;">
                             <div style="font-size: 0.75rem; color: var(--color-text-muted);">Precio Sucursal</div>
                             <div style="font-size: 1.1rem; font-weight: 700; color: var(--color-text);">Bs. ${precioEfectivo}</div>
-                            ${tienePrecioPersonalizado ? `<div style="font-size:0.68rem;color:var(--color-primary);">⚡ Local (Base: ${precioBase})</div>` : ''}
+                            ${tienePrecioPersonalizado ? `<div style="font-size:0.68rem;color:var(--color-primary-ink);">Local (Base: ${precioBase})</div>` : ''}
                         </div>
                     </div>
 
                     <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: space-between; border-top: 1px solid var(--color-border); padding-top: 0.75rem; font-size: 0.8rem;">
                         <button onclick="Encargado.cambiarDisponibilidadRapida(${p.producto_id}, ${estaDisponible ? 1 : 0}, event)" style="background: none; border: 1px solid ${estaDisponible ? 'var(--color-border)' : 'var(--color-danger)'}; color: ${estaDisponible ? 'var(--color-text-muted)' : 'var(--color-danger)'}; padding: 0.2rem 0.5rem; border-radius: var(--radius-sm); font-size: 0.72rem; cursor: pointer;">
-                            ${estaDisponible ? '👁️ Pausar en Caja' : '🟢 Habilitar en Caja'}
+                            ${estaDisponible ? svgIcon('eye') + ' Pausar en Caja' : 'Habilitar en Caja'}
                         </button>
-                        <span style="color: var(--color-primary); font-weight: 600;">✏️ Editar</span>
+                        <span style="color:var(--color-primary-ink); font-weight: 600;"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#pencil"></use></svg> Editar</span>
                     </div>
                 </div>
             `;
@@ -485,27 +487,26 @@ const Encargado = (() => {
             const tienePrecioPersonalizado = p.precio_sucursal !== null && p.precio_sucursal !== undefined && p.precio_sucursal !== '';
             const esDiaria = p.tipo_rotacion === 'diaria';
             const estaDisponible = p.disponible_venta !== undefined && p.disponible_venta !== null ? parseInt(p.disponible_venta, 10) === 1 : true;
-            const iconoProd = esDiaria ? '🥟' : (p.categoria_nombre && p.categoria_nombre.toLowerCase().includes('jugo') ? '🍊' : '🥤');
 
             let estadoBadge = '';
             let stockStyle = '';
             if (!estaDisponible) {
-                estadoBadge = '<span style="background: rgba(239, 68, 68, 0.2); color: var(--color-danger); padding: 0.2rem 0.5rem; border-radius: var(--radius-full); font-size: 0.72rem; font-weight: 700;">⛔ PAUSADO</span>';
+                estadoBadge = '<span style="background: rgba(239, 68, 68, 0.2); color: var(--color-danger); padding: 0.2rem 0.5rem; border-radius: var(--radius-full); font-size: 0.72rem; font-weight: 700;">PAUSADO</span>';
                 stockStyle = 'color: var(--color-danger); text-decoration: line-through;';
             } else if (cant === 0) {
-                estadoBadge = '<span style="background: var(--color-danger-bg); color: var(--color-danger); padding: 0.2rem 0.6rem; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700;">⛔ AGOTADO</span>';
+                estadoBadge = '<span style="background: var(--color-danger-bg); color: var(--color-danger); padding: 0.2rem 0.6rem; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700;">AGOTADO</span>';
                 stockStyle = 'color: var(--color-danger); font-weight: 800;';
             } else if (cant <= alerta) {
-                estadoBadge = '<span style="background: rgba(240, 160, 48, 0.15); color: var(--color-primary); padding: 0.2rem 0.6rem; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700;">⚠️ STOCK BAJO</span>';
-                stockStyle = 'color: var(--color-primary); font-weight: 700;';
+                estadoBadge = '<span style="background: rgba(240, 160, 48, 0.15); color:var(--color-primary-ink); padding: 0.2rem 0.6rem; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700;">STOCK BAJO</span>';
+                stockStyle = 'color:var(--color-primary-ink); font-weight: 700;';
             } else {
-                estadoBadge = '<span style="background: var(--color-success-bg); color: var(--color-success); padding: 0.2rem 0.6rem; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700;">✅ ÓPTIMO</span>';
+                estadoBadge = '<span style="background: var(--color-success-bg); color: var(--color-success); padding: 0.2rem 0.6rem; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700;">ÓPTIMO</span>';
                 stockStyle = 'color: var(--color-success); font-weight: 600;';
             }
 
             let precioHtml = `<strong>Bs. ${precioEfectivo}</strong>`;
             if (tienePrecioPersonalizado) {
-                precioHtml += `<br><span style="font-size:0.75rem;color:var(--color-primary);">⚡ Local (Base: ${precioBase})</span>`;
+                precioHtml += `<br><span style="font-size:0.75rem;color:var(--color-primary-ink);">Local (Base: ${precioBase})</span>`;
             } else {
                 precioHtml += `<br><span style="font-size:0.75rem;color:var(--color-text-muted);">General</span>`;
             }
@@ -514,13 +515,13 @@ const Encargado = (() => {
                 <tr style="border-bottom: 1px solid var(--color-border); ${!estaDisponible ? 'opacity: 0.7;' : ''}">
                     <td style="padding: 0.8rem 1rem;">
                         <div style="display: flex; align-items: center; gap: 0.6rem;">
-                            <span style="font-size: 1.2rem;">${iconoProd}</span>
+
                             <div>
                                 <div style="font-weight: 600; color: var(--color-text);">${escapeHtml(p.producto_nombre)}</div>
                                 <div style="font-size: 0.75rem; color: var(--color-text-dim);">
-                                    ID #${p.producto_id} • 
+                                    ID #${p.producto_id} •
                                     <span style="color: ${esDiaria ? '#e07a14' : 'var(--color-text-muted)'}; font-weight: 600;">
-                                        ${esDiaria ? '🥟 Rotación Diaria' : '🥤 Rotación Lenta'}
+                                        ${esDiaria ? 'Rotación Diaria' : 'Rotación Lenta'}
                                     </span>
                                 </div>
                             </div>
@@ -543,11 +544,11 @@ const Encargado = (() => {
                     </td>
                     <td style="padding: 0.8rem 1rem; text-align: center;">
                         <div style="display: flex; gap: 0.35rem; justify-content: center;">
-                            <button class="btn" style="padding: 0.3rem 0.6rem; font-size: 0.78rem;" onclick="Encargado.cambiarDisponibilidadRapida(${p.producto_id}, ${estaDisponible ? 1 : 0}, event)" title="${estaDisponible ? 'Pausar en caja' : 'Habilitar en caja'}">
-                                ${estaDisponible ? '👁️' : '🟢'}
+                            <button class="btn" style="padding: 0.3rem 0.6rem; font-size: 0.78rem;" aria-label="${estaDisponible ? 'Pausar en caja' : 'Habilitar en caja'}" onclick="Encargado.cambiarDisponibilidadRapida(${p.producto_id}, ${estaDisponible ? 1 : 0}, event)" title="${estaDisponible ? 'Pausar en caja' : 'Habilitar en caja'}">
+                                ${estaDisponible ? svgIcon('eye') : svgIcon('power')}
                             </button>
                             <button class="btn" style="padding: 0.3rem 0.65rem; font-size: 0.78rem;" onclick="Encargado.abrirModalAjuste(${p.producto_id})">
-                                ✏️ Editar
+                                <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#pencil"></use></svg> Editar
                             </button>
                         </div>
                     </td>
@@ -598,7 +599,7 @@ const Encargado = (() => {
             if (t === tab) {
                 if (btn) {
                     btn.style.borderBottom = '2px solid var(--color-primary)';
-                    btn.style.color = 'var(--color-primary)';
+                    btn.style.color = 'var(--color-primary-ink)';
                 }
                 if (panel) panel.style.display = 'block';
             } else {
@@ -621,7 +622,7 @@ const Encargado = (() => {
 
         productoActivoModal = prod;
         $('#ajuste-prod-id').value = prod.producto_id;
-        $('#modal-ajuste-titulo').textContent = `✏️ ${prod.producto_nombre}`;
+        $('#modal-ajuste-titulo').textContent = `${prod.producto_nombre}`;
         $('#modal-ajuste-subtitulo').textContent = `Sucursal: ${sucursalSeleccionadaNombre} • Stock actual: ${prod.cantidad_disponible} unidades`;
 
         // Tab 1: Precio y Parámetros
@@ -992,7 +993,7 @@ const Encargado = (() => {
             html += `
                 <tr style="border-bottom: 1px solid var(--color-border);">
                     <td style="padding: 0.6rem 0.8rem; font-weight: 600;">
-                        🥟 ${escapeHtml(p.producto_nombre)}
+                        ${escapeHtml(p.producto_nombre)}
                     </td>
                     <td style="padding: 0.6rem 0.8rem; text-align: center; color: var(--color-text-muted);">
                         ${cantActual} u.
@@ -1108,11 +1109,14 @@ const Encargado = (() => {
         toast.style.fontWeight = '600';
         toast.style.zIndex = '9999';
         toast.style.boxShadow = 'var(--shadow-lg)';
-        toast.style.transition = 'all 0.3s ease';
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        toast.style.transition = reduceMotion ? 'none' : 'opacity 200ms cubic-bezier(0.23, 1, 0.32, 1), transform 200ms cubic-bezier(0.23, 1, 0.32, 1)';
+        toast.style.opacity = reduceMotion ? '1' : '0';
+        toast.style.transform = reduceMotion ? 'none' : 'translateX(24px)';
 
         if (tipo === 'success') {
             toast.style.background = 'var(--color-success)';
-            toast.style.color = '#000';
+            toast.style.color = '#fff';
         } else if (tipo === 'error') {
             toast.style.background = 'var(--color-danger)';
             toast.style.color = '#fff';
@@ -1123,10 +1127,18 @@ const Encargado = (() => {
 
         toast.textContent = mensaje;
         document.body.appendChild(toast);
+        if (!reduceMotion) {
+            void toast.offsetWidth;
+            requestAnimationFrame(() => {
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateX(0)';
+            });
+        }
 
         setTimeout(() => {
             toast.style.opacity = '0';
-            setTimeout(() => toast.remove(), 300);
+            if (!reduceMotion) toast.style.transform = 'translateX(24px)';
+            setTimeout(() => toast.remove(), reduceMotion ? 0 : 220);
         }, 3500);
     }
 

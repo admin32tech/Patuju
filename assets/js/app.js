@@ -24,6 +24,9 @@ const App = (() => {
             .replace(/'/g, '&#039;');
     }
 
+    // Iconos SVG del sprite local
+    const svgIcon = (name) => `<svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#${name}"></use></svg>`;
+
     // ── Init ──────────────────────────────────
     // Se ha movido más abajo en el archivo para consolidar lógicas de turno.
 
@@ -58,9 +61,9 @@ const App = (() => {
         const container = $('#cat-filters');
         if (!container) return;
 
-        let html = `<button class="cat-filter__btn active" data-cat="todas">🏪 Todas</button>`;
+        let html = `<button class="cat-filter__btn active" data-cat="todas">Todas</button>`;
         productos.forEach(cat => {
-            html += `<button class="cat-filter__btn" data-cat="${escapeHtml(cat.id)}">${escapeHtml(cat.icono)} ${escapeHtml(cat.nombre)}</button>`;
+            html += `<button class="cat-filter__btn" data-cat="${escapeHtml(cat.id)}">${escapeHtml(cat.nombre)}</button>`;
         });
         container.innerHTML = html;
 
@@ -87,19 +90,19 @@ const App = (() => {
         filtered.forEach(cat => {
             html += `
                 <div class="categoria-section">
-                    <h3 class="categoria-section__title">${escapeHtml(cat.icono)} ${escapeHtml(cat.nombre)}</h3>
+                    <h3 class="categoria-section__title">${escapeHtml(cat.nombre)}</h3>
                     <div class="productos-grid">
                         ${cat.productos.map(p => {
                             const stock = parseInt(p.cantidad_disponible);
                             const alerta = parseInt(p.alerta_minima);
                             const stockAgotado = stock <= 0;
                             const stockBajo = !stockAgotado && stock <= alerta;
-                            
+
                             let stockHtml = '';
                             if (stockAgotado) {
                                 stockHtml = `<div style="position:absolute;top:5px;right:5px;background:var(--color-danger);color:#fff;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;font-weight:bold;">Agotado</div>`;
                             } else if (stockBajo) {
-                                stockHtml = `<div style="position:absolute;top:5px;right:5px;background:var(--color-warning);color:#000;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;font-weight:bold;">Stock: ${stock}</div>`;
+                                stockHtml = `<div style="position:absolute;top:5px;right:5px;background:var(--color-warning);color:#fff;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;font-weight:bold;">Stock: ${stock}</div>`;
                             } else {
                                 stockHtml = `<div style="position:absolute;top:5px;right:5px;background:rgba(0,0,0,0.6);color:#fff;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;">Stock: ${stock}</div>`;
                             }
@@ -107,8 +110,8 @@ const App = (() => {
                             return `
                             <div class="producto-card ${stockAgotado ? 'agotado' : ''}" data-id="${p.id}" data-nombre="${escapeHtml(p.nombre)}" data-precio="${p.precio}" data-stock="${stock}">
                                 ${stockHtml}
-                                <img class="producto-card__img" 
-                                     src="assets/img/${escapeHtml(p.imagen)}" 
+                                <img class="producto-card__img"
+                                     src="assets/img/${escapeHtml(p.imagen)}"
                                      alt="${escapeHtml(p.nombre)}"
                                      loading="lazy"
                                      onerror="this.src='assets/img/default.png'"
@@ -118,7 +121,7 @@ const App = (() => {
                                     <div class="producto-card__precio">${parseFloat(p.precio).toFixed(2)}</div>
                                     <div class="producto-card__action">
                                         <input type="number" class="producto-card__qty" id="qty-${p.id}" value="1" min="1" max="${stock}" inputmode="numeric" ${stockAgotado ? 'disabled' : ''}>
-                                        <button class="producto-card__btn-add" onclick="App.agregarMultiplesAlCarrito(${p.id})" ${stockAgotado ? 'disabled' : ''}>➕</button>
+                                        <button class="producto-card__btn-add" aria-label="Agregar ${escapeHtml(p.nombre)}" onclick="App.agregarMultiplesAlCarrito(${p.id})" ${stockAgotado ? 'disabled' : ''}><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#plus"></use></svg></button>
                                     </div>
                                 </div>
                             </div>
@@ -157,7 +160,7 @@ const App = (() => {
         const qtyInput = $('#qty-' + id);
         const qty = parseInt(qtyInput.value) || 1;
         if (qty <= 0) return;
-        
+
         let p = null;
         for (let cat of productos) {
             let found = cat.productos.find(prod => prod.id == id);
@@ -197,7 +200,7 @@ const App = (() => {
         if (carrito.length === 0) {
             container.innerHTML = `
                 <div class="caja__empty">
-                    <span class="caja__empty-icon">🛒</span>
+                    <span class="caja__empty-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#cart"></use></svg></span>
                     <span>Toca un producto para agregarlo</span>
                 </div>
             `;
@@ -226,11 +229,11 @@ const App = (() => {
                         <div class="cart-item__precio">Bs. ${item.precio.toFixed(2)} c/u</div>
                     </div>
                     <div class="cart-item__controls">
-                        <button class="cart-item__btn" onclick="App.cambiarCantidad(${index}, -1)">−</button>
+                        <button class="cart-item__btn" aria-label="Quitar una unidad" onclick="App.cambiarCantidad(${index}, -1)"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#minus"></use></svg></button>
                         <span class="cart-item__qty">${item.cantidad}</span>
                         <button class="cart-item__btn" onclick="App.cambiarCantidad(${index}, 1)">+</button>
                         <span class="cart-item__subtotal">Bs. ${subtotal.toFixed(2)}</span>
-                        <button class="cart-item__btn cart-item__btn--remove" onclick="App.eliminarItem(${index})">✕</button>
+                        <button class="cart-item__btn cart-item__btn--remove" aria-label="Eliminar del carrito" onclick="App.eliminarItem(${index})"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#x"></use></svg></button>
                     </div>
                 </div>
             `;
@@ -259,7 +262,7 @@ const App = (() => {
                 }
             }
             if (item.cantidad >= stockDisponible) {
-                toast(`⚠️ Stock máximo disponible: ${stockDisponible} u.`, 'error');
+                toast(`Stock máximo disponible: ${stockDisponible} u.`, 'error');
                 return;
             }
         }
@@ -286,7 +289,7 @@ const App = (() => {
             if (data.success && data.turno) {
                 turnoActual = data.turno;
                 const btn = $('#btn-turno');
-                if(btn) btn.textContent = '💼 Turno (Abierto)';
+                if(btn) btn.innerHTML = svgIcon('clock') + ' Turno (Abierto)';
             } else {
                 turnoActual = null;
                 const modal = $('#modal-abrir-turno');
@@ -305,17 +308,17 @@ const App = (() => {
         });
         const data = await res.json();
         if (data.success) {
-            toast('✅ Turno abierto correctamente');
+            toast('Turno abierto correctamente');
             $('#modal-abrir-turno').classList.remove('active');
             checkTurnoAbierto();
         } else {
-            toast('❌ ' + data.error, 'error');
+            toast(data.error, 'error');
         }
     }
 
     async function abrirModalGestionTurno() {
         if (!turnoActual) return toast('Debes abrir un turno primero', 'error');
-        
+
         // Obtenemos el Corte X para hacérselo fácil al cajero
         const res = await fetch('ajax/turno_caja.php', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -324,7 +327,7 @@ const App = (() => {
         const data = await res.json();
         if (data.success) {
             $('#turno-info').innerHTML = `
-                <div style="background:rgba(0,0,0,0.2);padding:1rem;border-radius:6px;">
+                <div style="background:var(--color-surface-2);padding:1rem;border-radius:6px;">
                     <strong>Resumen Rápido:</strong><br>
                     Fondo inicial: Bs. ${data.monto_apertura.toFixed(2)}<br>
                     Ventas del turno: Bs. ${data.ventas_sistema.toFixed(2)} (${data.num_ventas} ventas)<br>
@@ -354,10 +357,10 @@ const App = (() => {
         });
         const data = await res.json();
         if (data.success) {
-            toast('✅ ' + data.message);
+            toast(data.message);
             abrirModalGestionTurno(); // Recargar para actualizar el Corte X
         } else {
-            toast('❌ ' + data.error, 'error');
+            toast(data.error, 'error');
         }
     }
 
@@ -374,11 +377,11 @@ const App = (() => {
         const data = await res.json();
         if (data.success) {
             let msg = `Turno Cerrado. Diferencia: Bs. ${data.diferencia.toFixed(2)}`;
-            if (data.diferencia === 0) msg = '✅ Turno Cuadrado Perfecto!';
+            if (data.diferencia === 0) msg = 'Turno Cuadrado Perfecto!';
             alert(msg);
             window.location.reload(); // Recargar para forzar apertura de nuevo turno
         } else {
-            toast('❌ ' + data.error, 'error');
+            toast(data.error, 'error');
         }
     }
 
@@ -391,24 +394,24 @@ const App = (() => {
 
     function registrarVenta(imprimir = false) {
         if (carrito.length === 0) return;
-        if (!turnoActual) return toast('❌ Debes abrir un turno primero', 'error');
+        if (!turnoActual) return toast('Debes abrir un turno primero', 'error');
 
         imprimirPendiente = imprimir;
         const total = parseFloat($('#caja-total').textContent);
         $('#cobro-total-label').textContent = total.toFixed(2);
-        
+
         // Reset modal a efectivo por defecto
         const radioEf = document.querySelector('input[name="metodo_pago"][value="efectivo"]');
         if (radioEf) radioEf.checked = true;
         togglePagoEfectivo(true);
-        
+
         // Pre-llenar exacto para cobro rápido
         const recibidoInput = $('#cobro-recibido');
         if (recibidoInput) {
             recibidoInput.value = total.toFixed(2);
         }
         calcularVuelto();
-        
+
         $('#modal-cobro').classList.add('active');
         setCarritoAbierto(false);
         if (recibidoInput) {
@@ -451,7 +454,7 @@ const App = (() => {
         if (metodo === 'efectivo') {
             recibido = parseFloat($('#cobro-recibido').value) || 0;
             if (recibido < total) {
-                toast('❌ El monto recibido es menor al total', 'error');
+                toast('El monto recibido es menor al total', 'error');
                 btn.disabled = false;
                 btn.textContent = 'Confirmar y Registrar Venta';
                 return;
@@ -466,8 +469,8 @@ const App = (() => {
             const res = await fetch('ajax/registrar_venta.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    items: carrito, 
+                body: JSON.stringify({
+                    items: carrito,
                     sucursal_id: sucursalId,
                     metodo_pago: metodo,
                     monto_recibido: recibido,
@@ -477,7 +480,7 @@ const App = (() => {
             const data = await res.json();
 
             if (data.success) {
-                toast(`✅ ${data.mensaje}`, 'success');
+                toast(data.mensaje, 'success');
 
                 if (imprimirPendiente) {
                     imprimirTicket(data.venta_id || '001', carrito, total, sucursalNombre, metodo, recibido, cambio);
@@ -490,10 +493,10 @@ const App = (() => {
                 setCarritoAbierto(false);
                 cargarProductos(); // Recargar para actualizar stock en UI
             } else {
-                toast('❌ ' + (data.error || 'Error al registrar'), 'error');
+                toast((data.error || 'Error al registrar'), 'error');
             }
         } catch (err) {
-            toast('❌ Error de conexión', 'error');
+            toast('Error de conexión', 'error');
         } finally {
             btn.disabled = false;
             btn.textContent = 'Confirmar y Registrar Venta';
@@ -629,7 +632,7 @@ const App = (() => {
         const body = $('#modal-body');
         const title = $('#modal-title');
 
-        title.textContent = '📋 Historial de Ventas';
+        title.textContent = 'Historial de Ventas';
         body.innerHTML = '<p style="color:var(--color-text-muted)">Cargando...</p>';
         overlay.classList.add('active');
 
@@ -708,14 +711,14 @@ const App = (() => {
         const container = document.getElementById('toast-container');
         if (!container) return;
 
-        const icon = type === 'success' ? '✅' : '❌';
+        const iconMarkup = type === 'success' ? svgIcon('check') : svgIcon('x');
         const el = document.createElement('div');
         el.className = `toast toast--${type}`;
 
         const iconEl = document.createElement('span');
         iconEl.className = 'toast__icon';
         iconEl.setAttribute('aria-hidden', 'true');
-        iconEl.textContent = icon;
+        iconEl.innerHTML = iconMarkup;
 
         const msgEl = document.createElement('span');
         msgEl.className = 'toast__message';
@@ -723,7 +726,14 @@ const App = (() => {
 
         el.append(iconEl, msgEl);
         container.appendChild(el);
-        setTimeout(() => el.remove(), 3200);
+        void el.offsetWidth;
+        requestAnimationFrame(() => el.classList.add('is-visible'));
+
+        setTimeout(() => {
+            el.classList.remove('is-visible');
+            el.classList.add('is-leaving');
+            setTimeout(() => el.remove(), 220);
+        }, 3200);
     }
 
     // ── API Pública ───────────────────────────

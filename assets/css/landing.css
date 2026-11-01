@@ -1,15 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
+/* Mismos tokens del tema claro de la app (styles.css) */
 :root {
-  --color-bg: #0f0f12;
-  --color-surface: #1a1a24;
-  --color-surface-2: #22223a;
-  --color-primary: #f0a030;
-  --color-primary-hover: #f5b550;
-  --color-text: #e8e8f0;
-  --color-text-muted: #8888a8;
-  --color-success: #34d399;
-  --color-danger: #f87171;
+  --color-bg: #f3efe6;
+  --color-surface: #fffdf8;
+  --color-surface-2: #f6f1e5;
+  --color-surface-3: #ebe4d2;
+  --color-border: #ddd4bf;
+  --color-primary: #e3a21a;
+  --color-primary-hover: #efb43a;
+  --color-primary-ink: #7a4e00;
+  --color-on-primary: #2a1c00;
+  --color-primary-dim: rgba(227, 162, 26, 0.14);
+  --color-text: #231c10;
+  --color-text-muted: #5c5240;
+  --color-success: #0b7a55;
+  --color-danger: #b42b2b;
+  --shadow-lg: 0 10px 30px rgba(60, 45, 10, .14);
   --font: 'Inter', sans-serif;
 }
 
@@ -38,7 +45,7 @@ html {
 }
 
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--color-primary-ink);
   outline-offset: 2px;
 }
 
@@ -59,6 +66,14 @@ img {
   max-width: 100%;
   height: auto;
   display: block;
+}
+
+/* Iconos del sprite (sin esto los <svg> toman 300x150 por defecto) */
+.icon {
+  width: 1em;
+  height: 1em;
+  flex: none;
+  vertical-align: -0.125em;
 }
 
 .container {
@@ -82,7 +97,7 @@ h2 {
 }
 
 h2 span {
-  color: var(--color-primary);
+  color: var(--color-primary-ink);
 }
 
 /* Buttons */
@@ -92,31 +107,33 @@ h2 span {
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background-color 200ms cubic-bezier(0.23, 1, 0.32, 1), color 200ms cubic-bezier(0.23, 1, 0.32, 1), transform 200ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 200ms cubic-bezier(0.23, 1, 0.32, 1);
   border: none;
   text-align: center;
 }
 
 .btn-primary {
   background-color: var(--color-primary);
-  color: var(--color-bg);
+  color: var(--color-on-primary);
 }
 
-.btn-primary:hover {
-  background-color: var(--color-primary-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(240, 160, 48, 0.3);
+@media (hover: hover) and (pointer: fine) {
+  .btn-primary:hover {
+    background-color: var(--color-primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(227, 162, 26, 0.3);
+  }
 }
 
 .btn-outline {
   background-color: transparent;
   border: 2px solid var(--color-primary);
-  color: var(--color-primary);
+  color: var(--color-primary-ink);
 }
 
 .btn-outline:hover {
   background-color: var(--color-primary);
-  color: var(--color-bg);
+  color: var(--color-on-primary);
 }
 
 /* Navbar */
@@ -127,10 +144,10 @@ h2 span {
   width: 100%;
   padding: 1.2rem 0;
   z-index: 1000;
-  transition: all 0.3s ease;
-  background: rgba(15, 15, 18, 0.8);
+  transition: background-color 200ms cubic-bezier(0.23, 1, 0.32, 1), border-color 200ms cubic-bezier(0.23, 1, 0.32, 1);
+  background: rgba(243, 239, 230, 0.88);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .navbar .container {
@@ -149,7 +166,7 @@ h2 span {
 }
 
 .logo span {
-  color: var(--color-primary);
+  color: var(--color-primary-ink);
 }
 
 .nav-links {
@@ -160,11 +177,11 @@ h2 span {
 
 .nav-links a {
   font-weight: 500;
-  transition: color 0.3s ease;
+  transition: color 200ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .nav-links a:hover {
-  color: var(--color-primary);
+  color: var(--color-primary-ink);
 }
 
 .mobile-menu-btn {
@@ -202,7 +219,14 @@ h2 span {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(to right, rgba(15, 15, 18, 0.9) 0%, rgba(15, 15, 18, 0.5) 100%);
+  /* Velo claro: el texto oscuro se lee sobre la foto */
+  background: linear-gradient(to right, rgba(243, 239, 230, 0.96) 0%, rgba(243, 239, 230, 0.86) 55%, rgba(243, 239, 230, 0.6) 100%);
+}
+
+/* Todo el contenido del hero va por encima del velo (::before) */
+.hero .container {
+  position: relative;
+  z-index: 1;
 }
 
 .hero-content {
@@ -217,7 +241,7 @@ h2 span {
 }
 
 .hero h1 span {
-  color: var(--color-primary);
+  color: var(--color-primary-ink);
 }
 
 .hero p {
@@ -243,7 +267,7 @@ section {
 .nosotros-img {
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-lg);
 }
 
 .nosotros-text p {
@@ -261,7 +285,7 @@ section {
 
 .stat-item h4 {
   font-size: 2.5rem;
-  color: var(--color-primary);
+  color: var(--color-primary-ink);
   margin-bottom: 0.5rem;
 }
 
@@ -281,14 +305,16 @@ section {
   background-color: var(--color-surface);
   border-radius: 12px;
   overflow: hidden;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 200ms cubic-bezier(0.23, 1, 0.32, 1), border-color 200ms cubic-bezier(0.23, 1, 0.32, 1);
+  border: 1px solid var(--color-border);
 }
 
-.producto-card:hover {
-  transform: translateY(-10px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  border-color: var(--color-primary);
+@media (hover: hover) and (pointer: fine) {
+  .producto-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--color-primary);
+  }
 }
 
 .producto-img {
@@ -325,14 +351,16 @@ section {
   background-color: var(--color-surface);
   padding: 2rem;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid var(--color-border);
+  transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 200ms cubic-bezier(0.23, 1, 0.32, 1), border-color 200ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-.sucursal-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  border-color: var(--color-surface-2);
+@media (hover: hover) and (pointer: fine) {
+  .sucursal-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--color-primary);
+  }
 }
 
 .sucursal-header {
@@ -341,14 +369,14 @@ section {
   gap: 1rem;
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .sucursal-icon {
   width: 40px;
   height: 40px;
-  background-color: rgba(240, 160, 48, 0.1);
-  color: var(--color-primary);
+  background-color: var(--color-primary-dim);
+  color: var(--color-primary-ink);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -366,15 +394,15 @@ section {
 }
 
 .sucursal-info p i {
-  color: var(--color-primary);
+  color: var(--color-primary-ink);
   margin-top: 0.2rem;
 }
 
 /* Footer */
 footer {
-  background-color: #08080a;
+  background-color: var(--color-surface-3);
   padding: 4rem 0 2rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--color-border);
 }
 
 .footer-grid {
@@ -405,31 +433,38 @@ footer {
 
 .footer-links a {
   color: var(--color-text-muted);
-  transition: color 0.3s ease;
+  transition: color 200ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .footer-links a:hover {
-  color: var(--color-primary);
+  color: var(--color-primary-ink);
 }
 
 .footer-bottom {
   text-align: center;
   padding-top: 2rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--color-border);
   color: var(--color-text-muted);
   font-size: 0.9rem;
 }
 
 /* Animations - Intersection Observer */
 .fade-in {
-  opacity: 0;
-  transform: translateY(30px);
-  transition: opacity 0.8s ease, transform 0.8s ease;
+  opacity: 1;
+  transform: none;
 }
 
-.fade-in.appear {
-  opacity: 1;
-  transform: translateY(0);
+@media (prefers-reduced-motion: no-preference) {
+  .js .fade-in {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 450ms cubic-bezier(0.23, 1, 0.32, 1), transform 450ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .js .fade-in.appear {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Responsive */
@@ -449,18 +484,19 @@ footer {
   .nav-links {
     position: fixed;
     top: 70px;
-    left: -100%;
+    left: 0;
     width: 100%;
     height: calc(100vh - 70px);
     background-color: var(--color-surface);
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    transition: left 0.3s ease;
+    transform: translateX(-100%);
+    transition: transform 250ms cubic-bezier(0.23, 1, 0.32, 1);
   }
   
   .nav-links.active {
-    left: 0;
+    transform: translateX(0);
   }
   
   .mobile-menu-btn {
