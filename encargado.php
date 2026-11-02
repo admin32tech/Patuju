@@ -43,6 +43,9 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
             <?php if ($sucursalId > 0): ?>
             <a href="index.php" class="btn btn--primary" id="btn-ir-caja"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#cart"></use></svg> Ir a Caja POS</a>
             <?php endif; ?>
+            <?php if ($rol === 'admin'): ?>
+            <a href="admin.php" class="btn" id="btn-volver-admin"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#store"></use></svg> Volver a Admin</a>
+            <?php endif; ?>
             <a href="logout.php" class="btn" style="color:var(--color-danger)"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#logout"></use></svg> Salir</a>
         </div>
     </header>

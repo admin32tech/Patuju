@@ -37,7 +37,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
             FROM sucursales s
             LEFT JOIN ventas v ON v.sucursal_id = s.id 
                  AND DATE(v.fecha) BETWEEN ? AND ?
-            WHERE s.activo = 1
+            WHERE s.activo = 1 AND s.es_interna = 0
             GROUP BY s.id, s.nombre
             ORDER BY total_monto DESC
         ");
@@ -54,12 +54,13 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
         fputcsv($output, ['Producto', 'Categoría', 'Precio Base (Bs.)', 'Unidades Vendidas', 'Total Recaudado (Bs.)'], ';');
         $stmt = $db->prepare("
             SELECT p.nombre, c.nombre AS categoria, p.precio AS precio_base,
-                   COALESCE(SUM(dv.cantidad), 0) AS unidades_vendidas,
-                   COALESCE(SUM(dv.subtotal), 0) AS total_recaudado
+                   COALESCE(SUM(CASE WHEN v.id IS NOT NULL THEN dv.cantidad ELSE 0 END), 0) AS unidades_vendidas,
+                   COALESCE(SUM(CASE WHEN v.id IS NOT NULL THEN dv.subtotal ELSE 0 END), 0) AS total_recaudado
             FROM productos p
             JOIN categorias c ON c.id = p.categoria_id
             LEFT JOIN detalle_ventas dv ON dv.producto_id = p.id
             LEFT JOIN ventas v ON v.id = dv.venta_id AND DATE(v.fecha) BETWEEN ? AND ?
+                 AND v.sucursal_id NOT IN (SELECT id FROM sucursales WHERE es_interna = 1)
             WHERE p.activo = 1
             GROUP BY p.id, p.nombre, c.nombre, p.precio
             ORDER BY unidades_vendidas DESC
@@ -83,7 +84,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
                    SUM(v.total) as total
             FROM ventas v
             JOIN sucursales s ON s.id = v.sucursal_id
-            WHERE DATE(v.fecha) BETWEEN ? AND ?
+            WHERE DATE(v.fecha) BETWEEN ? AND ? AND s.es_interna = 0
             GROUP BY DATE(v.fecha), s.id, s.nombre
             ORDER BY DATE(v.fecha) DESC, total DESC
         ");
@@ -114,6 +115,7 @@ try {
             COALESCE(SUM(items_count), 0) AS unidades_hoy
         FROM ventas
         WHERE DATE(fecha) = CURDATE()
+          AND sucursal_id NOT IN (SELECT id FROM sucursales WHERE es_interna = 1)
     ");
     $kpisHoy = $stmtKpisHoy->fetch(PDO::FETCH_ASSOC);
 
@@ -129,6 +131,7 @@ try {
             COALESCE(SUM(items_count), 0) AS unidades_mes
         FROM ventas
         WHERE YEAR(fecha) = YEAR(CURDATE()) AND MONTH(fecha) = MONTH(CURDATE())
+          AND sucursal_id NOT IN (SELECT id FROM sucursales WHERE es_interna = 1)
     ");
     $kpisMes = $stmtKpisMes->fetch(PDO::FETCH_ASSOC);
 
@@ -150,7 +153,7 @@ try {
             WHERE DATE(fecha) = CURDATE()
             GROUP BY sucursal_id
         ) v_hoy ON v_hoy.sucursal_id = s.id
-        WHERE s.activo = 1
+        WHERE s.activo = 1 AND s.es_interna = 0
         ORDER BY unidades_hoy DESC, s.id ASC
     ");
     $ventasPorSucursal = $stmtSucursales->fetchAll(PDO::FETCH_ASSOC);
@@ -164,6 +167,7 @@ try {
             COALESCE(SUM(total), 0) AS total_bs
         FROM ventas
         WHERE DATE(fecha) = CURDATE()
+          AND sucursal_id NOT IN (SELECT id FROM sucursales WHERE es_interna = 1)
         GROUP BY HOUR(fecha)
         ORDER BY hora ASC
     ");
@@ -197,7 +201,10 @@ try {
         FROM productos p
         JOIN categorias c ON c.id = p.categoria_id
         JOIN detalle_ventas dv ON dv.producto_id = p.id
-        JOIN ventas v ON v.id = dv.venta_id AND MONTH(v.fecha) = MONTH(CURDATE()) AND YEAR(v.fecha) = YEAR(CURDATE())
+        JOIN ventas v ON v.id = dv.venta_id 
+             AND MONTH(v.fecha) = MONTH(CURDATE()) 
+             AND YEAR(v.fecha) = YEAR(CURDATE())
+             AND v.sucursal_id NOT IN (SELECT id FROM sucursales WHERE es_interna = 1)
         WHERE p.activo = 1
         GROUP BY p.id, p.nombre, p.imagen, c.nombre
         ORDER BY unidades_vendidas DESC
@@ -214,6 +221,7 @@ try {
             COALESCE(SUM(total), 0) AS total_bs
         FROM ventas
         WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)
+          AND sucursal_id NOT IN (SELECT id FROM sucursales WHERE es_interna = 1)
         GROUP BY DATE(fecha)
         ORDER BY dia ASC
     ");
@@ -248,6 +256,7 @@ try {
             COALESCE(SUM(total), 0)      AS total_bs
         FROM ventas
         WHERE fecha >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 11 MONTH)
+          AND sucursal_id NOT IN (SELECT id FROM sucursales WHERE es_interna = 1)
         GROUP BY mes_key, mes_label
         ORDER BY mes_key ASC
     ");
@@ -261,6 +270,7 @@ try {
             COALESCE(SUM(total), 0) AS total_bs
         FROM ventas
         WHERE MONTH(fecha) = MONTH(CURDATE()) AND YEAR(fecha) = YEAR(CURDATE())
+          AND sucursal_id NOT IN (SELECT id FROM sucursales WHERE es_interna = 1)
         GROUP BY metodo_pago
     ");
     $metodosPago = $stmtMetodos->fetchAll(PDO::FETCH_ASSOC);

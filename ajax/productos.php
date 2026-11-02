@@ -19,7 +19,11 @@ try {
         ORDER BY orden ASC
     ")->fetchAll();
 
-    $sucursal_id = (int) ($_SESSION['sucursal_id'] ?? 1);
+    if (empty($_SESSION['sucursal_id'])) {
+        jsonResponse(['success' => false, 'error' => 'Sin sucursal asociada'], 403);
+    }
+
+    $sucursal_id = (int) $_SESSION['sucursal_id'];
 
     // Obtener productos activos Y habilitados en la sucursal con su stock y precio específico
     $stmtProductos = $db->prepare("

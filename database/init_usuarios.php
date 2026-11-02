@@ -29,11 +29,16 @@ try {
     echo "📏 Longitud: " . strlen($hash) . " (válido = 60)\n";
     echo "✅ Verificación: " . (password_verify($password, $hash) ? 'PASS' : 'FAIL') . "\n\n";
 
+    // Obtener ID de SUC-000 dinámicamente si existe, o usar 16 por defecto (esquema limpio)
+    $stmtSuc000 = $db->query("SELECT id FROM sucursales WHERE codigo = 'SUC-000' LIMIT 1");
+    $suc000Row = $stmtSuc000 ? $stmtSuc000->fetch(PDO::FETCH_ASSOC) : null;
+    $idSuc000 = $suc000Row ? (int)$suc000Row['id'] : 16;
+
     // ── Usuarios: 1 Admin + 3 Encargados + 15 Cajeros ─────────────────────
     $usuarios = [
         // [username, nombre_display, rol, sucursal_id]
         // Admin Global
-        ['admin', 'Administrador General', 'admin', NULL],
+        ['admin', 'Administrador General', 'admin', $idSuc000], // SUC-000 Administración
         // 3 Encargados regionales
         ['encargado_encargado_central',    'Encargado Central',    'encargado', 1],
         ['encargado_encargado_cochabamba',  'Encargado Cochabamba', 'encargado', 6],

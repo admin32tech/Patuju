@@ -53,6 +53,7 @@ CREATE TABLE sucursales (
     latitud DECIMAL(10,7),
     longitud DECIMAL(10,7),
     activo TINYINT(1) DEFAULT 1,
+    es_interna TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -250,6 +251,10 @@ INSERT INTO sucursales (id, codigo, nombre, direccion, telefono, responsable, ho
 (13, 'SUC-013', 'Patuju 4',                 'Av. Víctor Paz #345',           '+591 4 6641234', 'Carmen Gutiérrez',   '07:00 - 14:00', -21.5355000, -64.7296000),
 (14, 'SUC-014', 'Patuju 5',                 'Av. 6 de Agosto #90',           '+591 3 4621234', 'Andrés Salvatierra', '07:00 - 13:00', -14.8333000, -64.9000000),
 (15, 'SUC-015', 'Patuju 6',                 'Av. 6 de Marzo #4500',          '+591 2 2841234', 'Juana Huanca',       '06:30 - 13:00', -16.5100000, -68.1950000);
+
+-- Sucursal interna para administradores
+INSERT INTO sucursales (id, codigo, nombre, direccion, es_interna) VALUES
+(16, 'SUC-000', 'Administración', 'Oficina central', 1);
 
 -- 3. Catálogo de Productos (16 ítems del menú real Patuju)
 INSERT INTO productos (id, nombre, precio, categoria_id, tipo_rotacion, descripcion) VALUES

@@ -9,7 +9,7 @@ if (file_exists(__DIR__ . '/config/database.php')) {
     try {
         require_once __DIR__ . '/config/database.php';
         $db = getDB();
-        $stmt = $db->query("SELECT * FROM sucursales WHERE activo = 1 ORDER BY nombre");
+        $stmt = $db->query("SELECT * FROM sucursales WHERE activo = 1 AND es_interna = 0 ORDER BY nombre");
         $sucursales = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $db_connected = true;
     } catch (Exception $e) {

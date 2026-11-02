@@ -27,7 +27,11 @@ if (!in_array($metodo_pago, ['efectivo', 'qr', 'tarjeta'], true)) {
     $metodo_pago = 'efectivo';
 }
 
-$sucursal_id = (int) ($_SESSION['sucursal_id'] ?? 1);
+if (empty($_SESSION['sucursal_id'])) {
+    jsonResponse(['success' => false, 'error' => 'Sin sucursal asociada'], 403);
+}
+
+$sucursal_id = (int) $_SESSION['sucursal_id'];
 $usuario_id  = (int) ($_SESSION['usuario_id'] ?? 0);
 
 try {

@@ -2,8 +2,8 @@
 require_once __DIR__ . '/config/auth.php';
 verificarSesion('caja');
 
-if ($_SESSION['usuario_rol'] === 'admin' && empty($_SESSION['sucursal_id'])) {
-    header('Location: admin.php');
+if (empty($_SESSION['sucursal_id'])) {
+    header('Location: logout.php?error=sin_sucursal');
     exit;
 }
 
