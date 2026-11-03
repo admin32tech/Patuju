@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/config/auth.php';
 verificarSesion('encargado');
+asegurarSucursalAdmin(); // el admin usa la sucursal interna aunque su sesión sea previa a la migración
 $sucursal = obtenerSucursalActual();
 $sucursalNombre = $sucursal ? $sucursal['nombre'] : ($_SESSION['sucursal_nombre'] ?? 'Mi Sucursal');
 $sucursalId = (int) ($_SESSION['sucursal_id'] ?? 0);
@@ -218,7 +219,7 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
 </div>
 
 <!-- ── Modal: Ingreso de Lote de Mercadería ──────────────── -->
-<div class="modal-overlay" id="modal-lote" style="display: none;">
+<div class="modal-overlay" id="modal-lote">
     <div class="modal" style="max-width: 750px; width: 90%;">
         <div class="modal__header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-border); padding-bottom: 0.75rem; margin-bottom: 1rem;">
             <h3 style="font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem;">
@@ -257,7 +258,7 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
 </div>
 
 <!-- ── Modal: Ajuste / Edición Integral de Producto ──────── -->
-<div class="modal-overlay" id="modal-ajuste" style="display: none;">
+<div class="modal-overlay" id="modal-ajuste">
     <div class="modal" style="max-width: 540px; width: 92%;">
         <div class="modal__header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-border); padding-bottom: 0.75rem;">
             <div>
@@ -377,7 +378,7 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
 </div>
 
 <!-- ── Modal: Movimientos Generales de Inventario ─────────── -->
-<div class="modal-overlay" id="modal-movimientos" style="display: none;">
+<div class="modal-overlay" id="modal-movimientos">
     <div class="modal" style="max-width: 850px; width: 92%;">
         <div class="modal__header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-border); padding-bottom: 0.75rem; margin-bottom: 1rem;">
             <h3 style="font-size: 1.2rem;">Historial de Movimientos de Inventario</h3>
@@ -406,7 +407,7 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
 </div>
 
 <!-- ── Modal: Carga Rápida de Stock Diario (Horneada Matutina) ── -->
-<div class="modal-overlay" id="modal-stock-diario" style="display: none;">
+<div class="modal-overlay" id="modal-stock-diario">
     <div class="modal" style="max-width: 680px; width: 92%;">
         <div class="modal__header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-border); padding-bottom: 0.75rem; margin-bottom: 1rem;">
             <h3 style="font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem;">

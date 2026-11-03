@@ -49,9 +49,7 @@ function opcionesSucursales(array $sucursales): string {
         </nav>
 
         <div class="admin-sidebar__foot">
-            <?php if (!empty($_SESSION['sucursal_id'])): ?>
             <a href="index.php" class="btn" id="btn-volver-caja"><?= ic('cart') ?> Ir a caja</a>
-            <?php endif; ?>
             <a href="encargado.php" class="btn" id="btn-ir-encargado"><?= ic('store') ?> Panel de sucursal</a>
             <a href="logout.php" class="btn btn--exit"><?= ic('logout') ?> Cerrar sesión</a>
         </div>

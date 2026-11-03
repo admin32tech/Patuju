@@ -2,7 +2,16 @@
 require_once __DIR__ . '/config/auth.php';
 verificarSesion('caja');
 
-if (empty($_SESSION['sucursal_id'])) {
+if (!asegurarSucursalAdmin()) {
+    if ($_SESSION['usuario_rol'] === 'admin') {
+        http_response_code(503);
+        echo '<!DOCTYPE html><meta charset="UTF-8"><title>Caja no disponible</title>'
+           . '<body style="font-family:sans-serif;max-width:32rem;margin:4rem auto;line-height:1.5">'
+           . '<h1>Caja no disponible</h1>'
+           . '<p>No existe la sucursal interna de administración. Ejecuta <code>actualizar_bd.php</code> y vuelve a intentar.</p>'
+           . '<p><a href="admin.php">Volver a Admin</a></p>';
+        exit;
+    }
     header('Location: logout.php?error=sin_sucursal');
     exit;
 }

@@ -60,6 +60,33 @@ function verificarSesionAjax(?string $rolRequerido = null): void {
 }
 
 /**
+ * Garantiza que el admin tenga sucursal en la sesión (la sucursal interna SUC-000).
+ * Cubre sesiones iniciadas antes de la migración. Devuelve false si no hay
+ * sucursal posible (no es admin, o falta ejecutar actualizar_bd.php).
+ */
+function asegurarSucursalAdmin(): bool {
+    if (!empty($_SESSION['sucursal_id'])) {
+        return true;
+    }
+    if (($_SESSION['usuario_rol'] ?? '') !== 'admin') {
+        return false;
+    }
+    try {
+        $row = getDB()->query(
+            "SELECT id, nombre FROM sucursales WHERE es_interna = 1 AND activo = 1 ORDER BY id LIMIT 1"
+        )->fetch();
+    } catch (Throwable $e) {
+        return false; // columna es_interna inexistente: BD sin migrar
+    }
+    if (!$row) {
+        return false;
+    }
+    $_SESSION['sucursal_id']     = (int) $row['id'];
+    $_SESSION['sucursal_nombre'] = $row['nombre'];
+    return true;
+}
+
+/**
  * Get current user's sucursal data
  */
 function obtenerSucursalActual(): ?array {

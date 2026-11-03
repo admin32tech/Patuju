@@ -641,11 +641,11 @@ const Encargado = (() => {
 
         // Iniciar en tab precio
         cambiarTabModal('precio');
-        $('#modal-ajuste').style.display = 'flex';
+        $('#modal-ajuste').classList.add('active');
     }
 
     function cerrarModalAjuste() {
-        $('#modal-ajuste').style.display = 'none';
+        $('#modal-ajuste').classList.remove('active');
         productoActivoModal = null;
     }
 
@@ -822,11 +822,11 @@ const Encargado = (() => {
 
         tbody.innerHTML = html;
         if ($('#lote-motivo')) $('#lote-motivo').value = '';
-        $('#modal-lote').style.display = 'flex';
+        $('#modal-lote').classList.add('active');
     }
 
     function cerrarModalLote() {
-        $('#modal-lote').style.display = 'none';
+        $('#modal-lote').classList.remove('active');
     }
 
     async function guardarLote() {
@@ -883,7 +883,7 @@ const Encargado = (() => {
     // ══════════════════════════════════════════════════════════════════
 
     async function abrirModalMovimientos() {
-        $('#modal-movimientos').style.display = 'flex';
+        $('#modal-movimientos').classList.add('active');
         const tbody = $('#movimientos-body');
         if (!tbody) return;
 
@@ -904,7 +904,7 @@ const Encargado = (() => {
     }
 
     function cerrarModalMovimientos() {
-        $('#modal-movimientos').style.display = 'none';
+        $('#modal-movimientos').classList.remove('active');
     }
 
     function renderMovimientos(movs) {
@@ -1006,11 +1006,11 @@ const Encargado = (() => {
         });
 
         tbody.innerHTML = html;
-        $('#modal-stock-diario').style.display = 'flex';
+        $('#modal-stock-diario').classList.add('active');
     }
 
     function cerrarModalStockDiario() {
-        $('#modal-stock-diario').style.display = 'none';
+        $('#modal-stock-diario').classList.remove('active');
     }
 
     function restablecerPredeterminadosDiarios() {
