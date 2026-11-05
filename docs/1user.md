@@ -165,7 +165,7 @@ Se agregó la sexta sección al panel de administración:
 ## 7. Cómo Probar y Ejecutar los Cambios
 
 1. **Ejecutar la migración de base de datos (BD existente):**
-   - Abre en el navegador (con MySQL encendido): `http://localhost/Patuju/actualizar_bd.php`
+   - Con MySQL encendido, inicia sesión como `admin` y pulsa **"Actualizar base de datos"** en la barra lateral del panel de admin (o, por consola, `php actualizar_bd.php`). Sin sesión de admin la web no lo ejecuta.
    - Es el único paso de migración: crea `usuario_sucursales` y, si la tabla no existía, siembra las asignaciones de los encargados. No cambia la clave del `admin` salvo que su hash no sea un Bcrypt válido.
    - Si la tabla se acaba de crear, verás los mensajes verdes con las asignaciones automáticas de los 3 encargados; si ya existía, el script lo indica y no toca las asignaciones.
    - **No** uses `database/init_usuarios.php` para migrar una BD en uso: es para instalaciones nuevas (tras importar `schema.sql`) y restablece las claves de todos los usuarios semilla a `patuju2024`.

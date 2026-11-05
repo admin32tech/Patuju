@@ -27,7 +27,7 @@
 > - ✅ Validaciones de `ajax/usuarios.php`: sucursal principal obligatoria y no interna para roles distintos de `admin`, sucursales internas rechazadas en `asignar_sucursales`, la principal del encargado siempre conserva acceso, `reset_password` sin clave por defecto.
 > - ✅ `actualizar_bd.php` ya no pisa la clave del `admin` (solo si su hash no es Bcrypt válido) y siembra `usuario_sucursales` solo si la tabla no existía.
 > - ✅ Suite PHPUnit endurecida: BD aislada `patuju_pos_test` (nombre terminado en `_test`) y variables `PATUJU_*`.
-> - ⏳ Pendiente: proteger `actualizar_bd.php` con autenticación o bloquearlo tras migrar.
+> - ✅ `actualizar_bd.php` protegido: desde la web solo el admin (botón en su panel); por consola, siempre.
 
 ---
 

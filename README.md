@@ -135,7 +135,8 @@ El archivo [`actualizar_bd.php`](actualizar_bd.php) funciona como herramienta de
 
 > ⚠️ **Al actualizar el código sobre una BD existente, ejecuta `actualizar_bd.php`.** Es el paso de migración: entre otras cosas crea la tabla `usuario_sucursales` (sucursales asignadas a encargados), sin la cual el encargado solo accede a su sucursal principal y la pestaña Usuarios del admin responde "Falta migrar la base de datos". También agrega `es_interna` y la sucursal SUC-000, que necesita `admin.php`. No uses `init_usuarios.php` para esto.
 
-- Puedes ejecutarlo desde el navegador en cualquier momento: `http://localhost/patuju/actualizar_bd.php`
+- **Desde la web solo lo ejecuta el admin:** inicia sesión como `admin` y pulsa **"Actualizar base de datos"** en la barra lateral del panel de admin (abre `actualizar_bd.php`). Sin sesión redirige a `login.php`; con otro rol, a `login.php?error=sin_permisos`.
+- **Por consola** se permite siempre (es la vía de recuperación si el admin no puede iniciar sesión): `php actualizar_bd.php`
 - **¿Qué valida automáticamente sin borrar datos?**
   1. Verifica si la tabla `ventas` tiene la columna `usuario_id` y su clave foránea correspondiente (la agrega si falta).
   2. Verifica el hash de la contraseña del usuario `admin`: solo si no es un Bcrypt válido lo restablece a `patuju2024`. Una clave cambiada por el admin no se toca.

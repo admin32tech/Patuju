@@ -2,8 +2,18 @@
 /**
  * Script de Actualización de Base de Datos - PATUJU POS
  * Corrige problemas estructurales en la BD local sin pérdida de datos.
+ *
+ * Acceso: desde la web solo el admin con sesión iniciada (botón "Actualizar base de
+ * datos" del panel de admin). Por consola (php actualizar_bd.php) se permite siempre:
+ * quien tiene acceso al servidor ya puede tocar la BD, y es la vía de recuperación si
+ * el admin no puede iniciar sesión (p. ej. su hash quedó dañado).
  */
 require_once __DIR__ . '/config/database.php';
+
+if (PHP_SAPI !== 'cli') {
+    require_once __DIR__ . '/config/auth.php';
+    verificarSesion('admin'); // sin sesión → login.php; otro rol → login.php?error=sin_permisos
+}
 
 echo "<h1>Actualización de Base de Datos - Patuju POS</h1>";
 
@@ -127,7 +137,7 @@ try {
     }
 
     echo "<h3>¡Actualización completada exitosamente!</h3>";
-    echo "<p>Ahora puedes volver al <a href='login.php'>Login</a>.</p>";
+    echo "<p><a href='admin.php'>Volver al panel de admin</a></p>";
 
 } catch (Exception $e) {
     echo "<h3 style='color:red;'>Error durante la actualización:</h3>";

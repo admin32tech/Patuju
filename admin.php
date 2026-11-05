@@ -52,6 +52,7 @@ function opcionesSucursales(array $sucursales): string {
         <div class="admin-sidebar__foot">
             <a href="index.php" class="btn" id="btn-volver-caja"><?= ic('cart') ?> Ir a caja</a>
             <a href="encargado.php" class="btn" id="btn-ir-encargado"><?= ic('store') ?> Panel de sucursal</a>
+            <a href="actualizar_bd.php" class="btn" id="btn-actualizar-bd" target="_blank" rel="noopener" title="Aplica las migraciones pendientes sin borrar datos" onclick="return confirm('¿Actualizar la base de datos? Aplica las migraciones pendientes sin borrar datos ni cambiar claves.')"><?= ic('refresh') ?> Actualizar base de datos</a>
             <a href="logout.php" class="btn btn--exit"><?= ic('logout') ?> Cerrar sesión</a>
         </div>
     </aside>
