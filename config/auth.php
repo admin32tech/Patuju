@@ -251,6 +251,7 @@ function puede(string $accion, ...$args): bool {
         case 'editar_stock':
         case 'ingreso_lote':
         case 'ajuste_stock':
+        case 'cerrar_turno': // Corte Z de las cajas a su cargo
             $sucId = (int) ($args[0] ?? 0);
             if ($rol === 'encargado') {
                 $asignadas = obtenerSucursalesAsignadas();

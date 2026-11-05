@@ -319,6 +319,149 @@ final class TurnoCajaTest extends TestCase
         }
     }
 
+    /**
+     * Cierre supervisado: el encargado ve los turnos abiertos de sus cajas con su Corte X.
+     */
+    public function testEncargadoListsOpenShiftsOfAssignedBranches(): void
+    {
+        $this->loginAs('caja_caja_central');
+        $this->openShift('caja_caja_central', 100);
+        $this->assertSame(200, $this->sell([['id' => 1, 'cantidad' => 1]], 10, 'caja_caja_central')->status);
+
+        $this->loginAs('caja_caja_lujan');
+        $this->openShift('caja_caja_lujan', 50);
+
+        $this->loginAs('caja_caja_1plan3000'); // sucursal 6, no asignada al encargado central
+        $this->openShift('caja_caja_1plan3000');
+
+        $this->loginAs('encargado_encargado_central');
+        $todos = $this->get('/ajax/turno_caja.php?abiertos=1', 'encargado_encargado_central');
+        $this->assertSame(200, $todos->status, $todos->body);
+        $sucursales = array_map(static fn (array $t): int => (int) $t['sucursal_id'], $todos->json()['turnos']);
+        sort($sucursales);
+        $this->assertSame([1, 2], $sucursales);
+
+        $central = $this->get('/ajax/turno_caja.php?abiertos=1&sucursal_id=1', 'encargado_encargado_central');
+        $this->assertSame(200, $central->status, $central->body);
+        $turno = $central->json()['turnos'][0];
+        $this->assertCount(1, $central->json()['turnos']);
+        $this->assertSame(7.0, (float) $turno['ventas_sistema']);
+        $this->assertSame(1, (int) $turno['num_ventas']);
+        $this->assertSame(107.0, (float) $turno['efectivo_esperado']);
+
+        // Sucursal ajena o valor manipulado → 403; la caja no puede listar turnos ajenos
+        foreach (['6', '0', 'abc'] as $valor) {
+            $this->assertSame(403, $this->get('/ajax/turno_caja.php?abiertos=1&sucursal_id=' . $valor, 'encargado_encargado_central')->status, $valor);
+        }
+        $this->assertSame(403, $this->get('/ajax/turno_caja.php?abiertos=1', 'caja_caja_central')->status);
+    }
+
+    public function testEncargadoClosesShiftOfAssignedBranch(): void
+    {
+        $this->loginAs('caja_caja_central');
+        $turnoId = (int) $this->openShift('caja_caja_central', 100)['turno_id'];
+        $this->assertSame(200, $this->sell([['id' => 1, 'cantidad' => 1]], 10, 'caja_caja_central')->status);
+
+        $this->loginAs('encargado_encargado_central');
+        $response = $this->post('/ajax/turno_caja.php', [
+            'accion' => 'cerrar_supervisado',
+            'turno_id' => $turnoId,
+            'monto_cierre' => 105,
+            'notas' => 'El cajero no cerró',
+        ], 'encargado_encargado_central');
+
+        $this->assertSame(200, $response->status, $response->body);
+        $data = $response->json();
+        $this->assertSame(107.0, (float) $data['efectivo_esperado']);
+        $this->assertSame(-2.0, (float) $data['diferencia']);
+        $this->assertSame('faltante', $data['estado']);
+
+        $fila = $this->row('SELECT * FROM turnos_caja WHERE id = ?', [$turnoId]);
+        $this->assertSame('cerrado', $fila['estado']);
+        $this->assertNotNull($fila['hora_cierre']);
+        $this->assertSame('105.00', $fila['monto_cierre']);
+        $this->assertStringContainsString('Cerrado por Encargado Central (encargado)', (string) $fila['notas']);
+        $this->assertStringContainsString('El cajero no cerró', (string) $fila['notas']);
+
+        // Cerrarlo otra vez → 409; el cajero ya no tiene turno ni puede vender
+        $otraVez = $this->post('/ajax/turno_caja.php', [
+            'accion' => 'cerrar_supervisado', 'turno_id' => $turnoId, 'monto_cierre' => 105,
+        ], 'encargado_encargado_central');
+        $this->assertSame(409, $otraVez->status);
+        $this->assertNull($this->get('/ajax/turno_caja.php', 'caja_caja_central')->json()['turno']);
+        $this->assertNotSame(200, $this->sell([['id' => 1, 'cantidad' => 1]], 10, 'caja_caja_central')->status);
+    }
+
+    public function testCerrarSupervisadoRejectsForeignBranchAndBadInput(): void
+    {
+        $this->loginAs('caja_caja_1plan3000'); // sucursal 6
+        $ajeno = (int) $this->openShift('caja_caja_1plan3000')['turno_id'];
+
+        $this->loginAs('caja_caja_central');
+        $propio = (int) $this->openShift('caja_caja_central')['turno_id'];
+
+        $this->loginAs('encargado_encargado_central');
+        $cerrar = fn (array $body, string $user = 'encargado_encargado_central') =>
+            $this->post('/ajax/turno_caja.php', ['accion' => 'cerrar_supervisado'] + $body, $user);
+
+        $this->assertSame(403, $cerrar(['turno_id' => $ajeno, 'monto_cierre' => 100])->status);
+        $this->assertSame('abierto', $this->scalar('SELECT estado FROM turnos_caja WHERE id = ?', [$ajeno]));
+
+        $this->assertSame(400, $cerrar(['turno_id' => 0, 'monto_cierre' => 100])->status);
+        $this->assertSame(400, $cerrar(['turno_id' => $propio])->status);
+        $this->assertSame(400, $cerrar(['turno_id' => $propio, 'monto_cierre' => 'abc'])->status);
+        $this->assertSame(400, $cerrar(['turno_id' => $propio, 'monto_cierre' => -5])->status);
+        $this->assertSame(404, $cerrar(['turno_id' => 999999, 'monto_cierre' => 100])->status);
+
+        // Una caja no puede cerrar turnos de otros, ni siquiera de su sucursal
+        $this->assertSame(403, $cerrar(['turno_id' => $propio, 'monto_cierre' => 100], 'caja_caja_central')->status);
+        $this->assertSame('abierto', $this->scalar('SELECT estado FROM turnos_caja WHERE id = ?', [$propio]));
+    }
+
+    /**
+     * El caso que motivó el cierre supervisado: una caja reasignada a otra sucursal con
+     * el turno abierto ya no puede cerrarlo ella misma; el encargado (o el admin) sí.
+     */
+    public function testReassignedCajaShiftCanBeClosedBySupervisor(): void
+    {
+        $this->loginAs('caja_caja_central');
+        $turnoId = (int) $this->openShift('caja_caja_central', 80)['turno_id'];
+
+        $this->loginAs('admin');
+        $editar = $this->post('/ajax/usuarios.php', [
+            'accion' => 'editar', 'id' => 5, 'nombre_display' => 'Caja Central',
+            'rol' => 'caja', 'sucursal_id' => 2, 'activo' => 1,
+        ], 'admin');
+        $this->assertSame(200, $editar->status, $editar->body);
+
+        // Desde su caja (ahora sucursal 2) ya no lo ve ni lo puede cerrar
+        $this->assertNull($this->get('/ajax/turno_caja.php', 'caja_caja_central')->json()['turno']);
+        $propio = $this->post('/ajax/turno_caja.php', ['accion' => 'cerrar', 'monto_cierre' => 80], 'caja_caja_central');
+        $this->assertSame(404, $propio->status);
+
+        $this->loginAs('encargado_encargado_central');
+        $supervisado = $this->post('/ajax/turno_caja.php', [
+            'accion' => 'cerrar_supervisado', 'turno_id' => $turnoId, 'monto_cierre' => 80,
+        ], 'encargado_encargado_central');
+        $this->assertSame(200, $supervisado->status, $supervisado->body);
+        $this->assertSame('cuadrado', $supervisado->json()['estado']);
+        $this->assertSame('cerrado', $this->scalar('SELECT estado FROM turnos_caja WHERE id = ?', [$turnoId]));
+    }
+
+    public function testAdminCanCloseAnyShift(): void
+    {
+        $this->loginAs('caja_caja_1plan3000');
+        $turnoId = (int) $this->openShift('caja_caja_1plan3000', 20)['turno_id'];
+
+        $this->loginAs('admin');
+        $this->assertSame(200, $this->get('/ajax/turno_caja.php?abiertos=1&sucursal_id=6', 'admin')->status);
+        $response = $this->post('/ajax/turno_caja.php', [
+            'accion' => 'cerrar_supervisado', 'turno_id' => $turnoId, 'monto_cierre' => 20,
+        ], 'admin');
+        $this->assertSame(200, $response->status, $response->body);
+        $this->assertStringContainsString('(admin)', (string) $this->scalar('SELECT notas FROM turnos_caja WHERE id = ?', [$turnoId]));
+    }
+
     public function testUnknownActionReturnsBadRequest(): void
     {
         $this->loginAs('caja_caja_central');

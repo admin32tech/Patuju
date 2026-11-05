@@ -7,6 +7,8 @@
  * POST {accion:'egreso', monto, motivo}          → Registrar egreso menor
  * POST {accion:'corte_x'}                        → Corte X (lectura sin cerrar)
  * POST {accion:'cerrar', monto_cierre, notas}    → Corte Z (cierre definitivo)
+ * GET  ?abiertos=1[&sucursal_id=X]              → Turnos abiertos de las cajas a cargo (encargado/admin)
+ * POST {accion:'cerrar_supervisado', turno_id, monto_cierre, notas} → Corte Z de una caja a cargo (encargado/admin)
  */
 require_once __DIR__ . '/../config/auth.php';
 verificarSesionAjax();
@@ -89,6 +91,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $tur['diferencia']      = $tur['diferencia'] !== null ? floatval($tur['diferencia']) : null;
             $tur['egresos_menores'] = floatval($tur['egresos_menores']);
         }
+
+        jsonResponse(['success' => true, 'turnos' => $turnos]);
+    }
+
+    // ── Turnos abiertos de las cajas a cargo (encargado/admin) ────────────
+    // Base del cierre supervisado: el encargado ve el Corte X de cada turno abierto
+    // de sus sucursales (p. ej. un cajero que no cerró o que fue reasignado).
+    if (isset($_GET['abiertos'])) {
+        if ($rol !== 'admin' && $rol !== 'encargado') {
+            jsonResponse(['success' => false, 'error' => 'Sin permisos para gestionar turnos'], 403);
+        }
+
+        $where  = ["t.estado = 'abierto'"];
+        $params = [];
+        // sucursal_id manipulado (0, 'abc', ajena) → 403
+        $filtroSuc = sucursalSolicitadaPermitida($_GET['sucursal_id'] ?? null, 'cerrar_turno');
+        if ($filtroSuc !== null) {
+            $where[]  = "t.sucursal_id = ?";
+            $params[] = $filtroSuc;
+        } elseif ($rol !== 'admin') {
+            $asignadas = obtenerSucursalesAsignadas();
+            if (!empty($asignadas)) {
+                $where[] = "t.sucursal_id IN (" . implode(',', array_fill(0, count($asignadas), '?')) . ")";
+                $params  = array_merge($params, $asignadas);
+            } else {
+                $where[] = "1=0";
+            }
+        }
+
+        $stmtAbiertos = $db->prepare("
+            SELECT t.*, u.nombre_display AS cajero_nombre, s.nombre AS sucursal_nombre
+            FROM   turnos_caja t
+            JOIN   usuarios    u ON u.id = t.usuario_id
+            JOIN   sucursales  s ON s.id = t.sucursal_id
+            WHERE  " . implode(' AND ', $where) . "
+            ORDER  BY t.hora_apertura ASC
+        ");
+        $stmtAbiertos->execute($params);
+        $turnos = $stmtAbiertos->fetchAll();
+
+        foreach ($turnos as &$tur) {
+            $resumen = calcularVentasTurno($db, (int) $tur['id'], $tur['hora_apertura'], (int) $tur['sucursal_id'], (int) $tur['usuario_id']);
+            $tur['monto_apertura']    = floatval($tur['monto_apertura']);
+            $tur['egresos_menores']   = floatval($tur['egresos_menores']);
+            $tur['ventas_sistema']    = $resumen['total'];
+            $tur['num_ventas']        = $resumen['count'];
+            $tur['efectivo_esperado'] = round($tur['monto_apertura'] + $resumen['total'] - $tur['egresos_menores'], 2);
+        }
+        unset($tur);
 
         jsonResponse(['success' => true, 'turnos' => $turnos]);
     }
@@ -258,6 +309,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'success'           => true,
             'tipo'              => 'corte_z',
             'turno_id'          => $turno['id'],
+            'hora_apertura'     => $turno['hora_apertura'],
+            'monto_apertura'    => floatval($turno['monto_apertura']),
+            'ventas_sistema'    => $ventasSistema,
+            'num_ventas'        => $resumen['count'],
+            'egresos'           => $egresos,
+            'efectivo_esperado' => $efectivoEsperado,
+            'monto_cierre'      => $montoCierre,
+            'diferencia'        => $diferencia,
+            'estado'            => $diferencia == 0 ? 'cuadrado' : ($diferencia > 0 ? 'sobrante' : 'faltante'),
+        ]);
+    }
+
+    // ── CORTE Z SUPERVISADO: el encargado (o admin) cierra el turno de una de sus cajas ──
+    // Cubre al cajero que no cerró su turno o que fue reasignado a otra sucursal con el
+    // turno abierto (desde su caja ya no podría cerrarlo).
+    if ($accion === 'cerrar_supervisado') {
+        if ($rol !== 'admin' && $rol !== 'encargado') {
+            jsonResponse(['success' => false, 'error' => 'Solo un encargado o el administrador puede cerrar turnos de otras cajas'], 403);
+        }
+
+        $turnoId     = (int) ($input['turno_id'] ?? 0);
+        $montoRaw    = $input['monto_cierre'] ?? null;
+        $montoCierre = is_numeric($montoRaw) ? round((float) $montoRaw, 2) : null;
+        $notas       = trim((string) ($input['notas'] ?? ''));
+
+        if ($turnoId <= 0) {
+            jsonResponse(['success' => false, 'error' => 'Turno no válido'], 400);
+        }
+        if ($montoCierre === null || $montoCierre < 0) {
+            jsonResponse(['success' => false, 'error' => 'Debes ingresar el monto físico contado'], 400);
+        }
+
+        $stmtTurno = $db->prepare("SELECT * FROM turnos_caja WHERE id = ?");
+        $stmtTurno->execute([$turnoId]);
+        $turno = $stmtTurno->fetch();
+        if (!$turno) {
+            jsonResponse(['success' => false, 'error' => 'Turno no encontrado'], 404);
+        }
+        if (!puede('cerrar_turno', (int) $turno['sucursal_id'])) {
+            jsonResponse(['success' => false, 'error' => 'No puedes cerrar turnos de esta sucursal'], 403);
+        }
+        if ($turno['estado'] !== 'abierto') {
+            jsonResponse(['success' => false, 'error' => 'El turno ya está cerrado'], 409);
+        }
+
+        $resumen          = calcularVentasTurno($db, (int) $turno['id'], $turno['hora_apertura'], (int) $turno['sucursal_id'], (int) $turno['usuario_id']);
+        $ventasSistema    = $resumen['total'];
+        $egresos          = floatval($turno['egresos_menores']);
+        $efectivoEsperado = round(floatval($turno['monto_apertura']) + $ventasSistema - $egresos, 2);
+        $diferencia       = round($montoCierre - $efectivoEsperado, 2);
+
+        // Queda registrado quién cerró el turno en lugar del cajero
+        $cerradoPor = (string) ($_SESSION['usuario_nombre'] ?? 'Encargado');
+        $notaFinal  = trim('[Cerrado por ' . $cerradoPor . ' (' . $rol . ')] ' . $notas);
+
+        // estado = 'abierto' en el WHERE: si el cajero lo cerró un instante antes, no se pisa
+        $stmtCierre = $db->prepare("
+            UPDATE turnos_caja
+            SET monto_cierre   = ?,
+                ventas_sistema = ?,
+                diferencia     = ?,
+                notas          = ?,
+                hora_cierre    = NOW(),
+                estado         = 'cerrado'
+            WHERE id = ? AND estado = 'abierto'
+        ");
+        $stmtCierre->execute([$montoCierre, $ventasSistema, $diferencia, $notaFinal, $turno['id']]);
+        if ($stmtCierre->rowCount() !== 1) {
+            jsonResponse(['success' => false, 'error' => 'El turno ya está cerrado'], 409);
+        }
+
+        jsonResponse([
+            'success'           => true,
+            'tipo'              => 'corte_z',
+            'turno_id'          => (int) $turno['id'],
+            'cerrado_por'       => $cerradoPor,
             'hora_apertura'     => $turno['hora_apertura'],
             'monto_apertura'    => floatval($turno['monto_apertura']),
             'ventas_sistema'    => $ventasSistema,

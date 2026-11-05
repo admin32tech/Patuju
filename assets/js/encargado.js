@@ -194,8 +194,11 @@ const Encargado = (() => {
                         </div>
                     </div>
 
-                    <!-- Botón de Navegación Inferior -->
-                    <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 1.25rem; padding-top: 0.8rem; border-top: 1px solid var(--color-border);">
+                    <!-- Botón de Navegación Inferior (y cierre de turno si hay uno abierto) -->
+                    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 0.6rem; margin-top: 1.25rem; padding-top: 0.8rem; border-top: 1px solid var(--color-border);">
+                        ${turnoAbierto
+                            ? `<button type="button" class="btn" data-cerrar-turno="${escapeHtml(s.id)}" aria-label="Cerrar turno de ${escapeHtml(s.nombre)}" style="font-size: 0.85rem; font-weight: 700; padding: 0.45rem 0.9rem; border-radius: var(--radius-md); color: var(--color-danger); border-color: var(--color-danger);">Cerrar turno</button>`
+                            : ''}
                         <span class="btn btn--primary" aria-hidden="true" style="font-size: 0.88rem; font-weight: 700; padding: 0.45rem 1.1rem; border-radius: var(--radius-md);">
                             Ver sucursal →
                         </span>
@@ -208,17 +211,148 @@ const Encargado = (() => {
 
         // Delegación: el id vive en data-*, nunca en un onclick con texto del servidor
         container.onclick = (e) => {
+            const btnCerrar = e.target.closest('[data-cerrar-turno]');
+            if (btnCerrar) {
+                abrirModalCerrarTurno(btnCerrar.dataset.cerrarTurno);
+                return;
+            }
             const card = e.target.closest('[data-sucursal-id]');
             if (card) abrirSucursalPorId(card.dataset.sucursalId);
         };
         container.onkeydown = (e) => {
             if (e.key !== 'Enter' && e.key !== ' ') return;
+            // El botón "Cerrar turno" ya responde a Enter/Espacio con su propio click
+            if (e.target.closest('[data-cerrar-turno]')) return;
             const card = e.target.closest('[data-sucursal-id]');
             if (!card) return;
             e.preventDefault();
             abrirSucursalPorId(card.dataset.sucursalId);
         };
     }
+
+    // ══════════════════════════════════════════════════════════════════
+    // CIERRE DE TURNO SUPERVISADO (Corte Z de una caja a cargo)
+    // Para el cajero que no cerró su turno o que fue reasignado con el turno abierto.
+    // ══════════════════════════════════════════════════════════════════
+    let sucursalCierreId = null;
+    let focoPrevioCierre = null;
+
+    async function abrirModalCerrarTurno(sucursalId) {
+        sucursalCierreId = sucursalId;
+        focoPrevioCierre = document.activeElement;
+        const modal = $('#modal-cerrar-turno');
+        const body = $('#cerrar-turno-body');
+        if (!modal || !body) return;
+
+        const sucursal = sucursalesLista.find(s => s.id == sucursalId);
+        $('#titulo-cerrar-turno').textContent = 'Cerrar turno' + (sucursal ? ' — ' + sucursal.nombre : '');
+        body.innerHTML = '<p style="color: var(--color-text-muted); text-align: center; padding: 2rem;">Cargando turnos abiertos...</p>';
+        modal.classList.add('active');
+
+        try {
+            const res = await fetch(`ajax/turno_caja.php?abiertos=1&sucursal_id=${encodeURIComponent(sucursalId)}`);
+            const data = await res.json();
+            if (!data.success) {
+                body.innerHTML = `<p style="color: var(--color-danger); text-align: center; padding: 2rem;">${escapeHtml(data.error || 'No se pudieron cargar los turnos')}</p>`;
+                return;
+            }
+            renderTurnosAbiertos(data.turnos || []);
+        } catch (err) {
+            body.innerHTML = '<p style="color: var(--color-danger); text-align: center; padding: 2rem;">Error de conexión</p>';
+        }
+    }
+
+    function renderTurnosAbiertos(turnos) {
+        const body = $('#cerrar-turno-body');
+        if (!body) return;
+
+        if (turnos.length === 0) {
+            body.innerHTML = '<p style="color: var(--color-text-muted); text-align: center; padding: 2rem;">Esta sucursal no tiene turnos abiertos.</p>';
+            return;
+        }
+
+        const bs = (n) => 'Bs. ' + Number(n || 0).toFixed(2);
+        body.innerHTML = turnos.map(t => {
+            const id = escapeHtml(t.id);
+            const apertura = new Date(String(t.hora_apertura).replace(' ', 'T')).toLocaleString('es-BO', {
+                day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+            });
+            return `
+                <div style="border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; margin-bottom: 0.6rem;">
+                        <strong>${escapeHtml(t.cajero_nombre)}</strong>
+                        <span style="font-size: 0.8rem; color: var(--color-text-muted);">Abierto: ${escapeHtml(apertura)}</span>
+                    </div>
+                    <div style="background: var(--color-surface-2); border-radius: var(--radius-md); padding: 0.75rem; font-size: 0.88rem; line-height: 1.7;">
+                        Fondo inicial: ${bs(t.monto_apertura)}<br>
+                        Ventas del turno: ${bs(t.ventas_sistema)} (${parseInt(t.num_ventas, 10) || 0} ventas)<br>
+                        Egresos: ${bs(t.egresos_menores)}<br>
+                        <strong style="color: var(--color-success);">Efectivo esperado: ${bs(t.efectivo_esperado)}</strong>
+                    </div>
+                    <label for="ct-monto-${id}" style="display: block; font-size: 0.85rem; font-weight: 600; margin: 0.8rem 0 0.3rem;">Efectivo contado (Bs.)</label>
+                    <input type="number" id="ct-monto-${id}" class="field" min="0" step="0.50" value="${Number(t.efectivo_esperado || 0).toFixed(2)}" style="width: 100%;">
+                    <label for="ct-notas-${id}" style="display: block; font-size: 0.85rem; font-weight: 600; margin: 0.6rem 0 0.3rem;">Notas (opcional)</label>
+                    <input type="text" id="ct-notas-${id}" class="field" maxlength="250" placeholder="Ej.: el cajero no cerró su turno" style="width: 100%;">
+                    <button type="button" class="btn btn--primary" data-confirmar-cierre="${id}" style="width: 100%; margin-top: 0.8rem; font-weight: 700;">Cerrar turno (Corte Z)</button>
+                </div>
+            `;
+        }).join('');
+
+        body.onclick = (e) => {
+            const btn = e.target.closest('[data-confirmar-cierre]');
+            if (btn) confirmarCerrarTurno(btn.dataset.confirmarCierre, btn);
+        };
+        const primero = body.querySelector('input');
+        if (primero) primero.focus();
+    }
+
+    async function confirmarCerrarTurno(turnoId, btn) {
+        const monto = $(`#ct-monto-${turnoId}`)?.value ?? '';
+        const notas = $(`#ct-notas-${turnoId}`)?.value ?? '';
+        if (monto === '' || isNaN(Number(monto)) || Number(monto) < 0) {
+            mostrarNotificacion('Ingresa el efectivo contado', 'error');
+            return;
+        }
+        if (!confirm('¿Cerrar definitivamente este turno de caja?')) return;
+
+        if (btn) btn.disabled = true;
+        try {
+            const res = await fetch('ajax/turno_caja.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accion: 'cerrar_supervisado', turno_id: Number(turnoId), monto_cierre: Number(monto), notas })
+            });
+            const data = await res.json();
+            if (!data.success) {
+                mostrarNotificacion(data.error || 'No se pudo cerrar el turno', 'error');
+                if (btn) btn.disabled = false;
+                return;
+            }
+            const dif = Number(data.diferencia || 0);
+            const detalle = dif === 0 ? 'cuadrado' : (dif > 0 ? `sobrante Bs. ${dif.toFixed(2)}` : `faltante Bs. ${Math.abs(dif).toFixed(2)}`);
+            mostrarNotificacion(`Turno cerrado (${detalle})`, 'success');
+            cargarResumenSucursales();
+            abrirModalCerrarTurno(sucursalCierreId);
+        } catch (err) {
+            mostrarNotificacion('Error de conexión', 'error');
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    function cerrarModalCerrarTurno() {
+        const modal = $('#modal-cerrar-turno');
+        if (!modal || !modal.classList.contains('active')) return;
+        modal.classList.remove('active');
+        sucursalCierreId = null;
+        const previo = focoPrevioCierre;
+        focoPrevioCierre = null;
+        if (previo && document.body.contains(previo) && typeof previo.focus === 'function') previo.focus();
+    }
+
+    // Escape cierra el modal de cierre de turno
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') cerrarModalCerrarTurno();
+    });
 
     function abrirSucursalPorId(id) {
         const sucursal = sucursalesLista.find(s => s.id == id);
@@ -1180,6 +1314,8 @@ const Encargado = (() => {
         cerrarModalLote,
         guardarLote,
         abrirModalMovimientos,
-        cerrarModalMovimientos
+        cerrarModalMovimientos,
+        abrirModalCerrarTurno,
+        cerrarModalCerrarTurno
     };
 })();

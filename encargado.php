@@ -406,6 +406,19 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
     </div>
 </div>
 
+<!-- ── Modal: Cerrar turno de una caja a cargo (Corte Z supervisado) ── -->
+<div class="modal-overlay" id="modal-cerrar-turno" role="dialog" aria-modal="true" aria-labelledby="titulo-cerrar-turno">
+    <div class="modal" style="max-width: 560px; width: 92%;">
+        <div class="modal__header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-border); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+            <h3 id="titulo-cerrar-turno" style="font-size: 1.2rem;">Cerrar turno</h3>
+            <button class="modal__close" aria-label="Cerrar" onclick="Encargado.cerrarModalCerrarTurno()" style="background: none; border: none; color: var(--color-text-muted); font-size: 1.3rem; cursor: pointer;"><svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#x"></use></svg></button>
+        </div>
+        <div class="modal__body" id="cerrar-turno-body">
+            <!-- Generado por JS -->
+        </div>
+    </div>
+</div>
+
 <!-- ── Modal: Carga Rápida de Stock Diario (Horneada Matutina) ── -->
 <div class="modal-overlay" id="modal-stock-diario">
     <div class="modal" style="max-width: 680px; width: 92%;">

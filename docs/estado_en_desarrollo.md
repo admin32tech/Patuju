@@ -99,6 +99,7 @@ El sistema opera con total independencia por sucursal a través de las 3 vistas 
 - ✅ **Validaciones de `ajax/usuarios.php`:** sucursal principal obligatoria y no interna para roles distintos de `admin`, la principal del encargado siempre conserva acceso, `reset_password` exige clave explícita y `crear` acepta `activo`.
 - ✅ **Migración:** `actualizar_bd.php` ya no pisa la clave del `admin` (solo la restablece si su hash no es un Bcrypt válido) y siembra `usuario_sucursales` solo cuando la tabla no existía; `database/init_usuarios.php` queda para instalaciones nuevas.
 - ✅ **Suite de pruebas endurecida:** BD aislada `patuju_pos_test` (el nombre debe terminar en `_test`), variables `PATUJU_*` respetadas por la app y la suite. Cómo correrla: ver la sección "Pruebas" del [README](../README.md).
+- ✅ **Cierre de turno supervisado:** desde el panel del encargado, cada sucursal con turno abierto muestra "Cerrar turno" (Corte X y efectivo contado → Corte Z). El encargado cierra los turnos de sus cajas y el admin los de cualquiera; queda registrado quién lo cerró. Cubre al cajero que no cerró o que fue reasignado con el turno abierto.
 - ⏳ **Pendiente:** proteger `actualizar_bd.php` con autenticación (rol `admin`) o bloquearlo tras migrar; hoy cualquiera con acceso a la URL puede ejecutarlo.
 
 ---
