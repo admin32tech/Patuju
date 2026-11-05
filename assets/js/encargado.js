@@ -3,6 +3,17 @@
  * Flujo en 2 vistas: Sucursal (Resumen) → Catálogo → Edición Modal por Pestañas
  */
 
+// Sesión invalidada en el servidor (usuario desactivado, eliminado o expirado):
+// cualquier 401 de los endpoints manda al login en vez de dejar la vista en un estado falso.
+(() => {
+    const fetchOriginal = window.fetch.bind(window);
+    window.fetch = async (...args) => {
+        const res = await fetchOriginal(...args);
+        if (res.status === 401) window.location.href = 'login.php';
+        return res;
+    };
+})();
+
 const Encargado = (() => {
     let sucursalesLista = [];
     let sucursalSeleccionadaId = null;

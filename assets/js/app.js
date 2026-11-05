@@ -3,6 +3,17 @@
  * Maneja: catálogo, carrito, ventas, historial
  */
 
+// Sesión invalidada en el servidor (usuario desactivado, eliminado o expirado):
+// cualquier 401 de los endpoints manda al login en vez de dejar la vista en un estado falso.
+(() => {
+    const fetchOriginal = window.fetch.bind(window);
+    window.fetch = async (...args) => {
+        const res = await fetchOriginal(...args);
+        if (res.status === 401) window.location.href = 'login.php';
+        return res;
+    };
+})();
+
 const App = (() => {
     // ── Estado ────────────────────────────────
     let carrito = [];
@@ -621,10 +632,20 @@ const App = (() => {
         window.print();
     }
 
+    // Sucursal de la caja activa. La caja no la envía: el backend usa la de su sesión,
+    // que sigue vigente aunque el admin la reasigne con la página abierta.
+    // Admin y encargado sí indican la caja en la que están.
+    function paramSucursal() {
+        if (document.body.dataset.usuarioRol === 'caja') return '';
+        return '&sucursal_id=' + encodeURIComponent(document.body.dataset.sucursalId || '');
+    }
+
+    const LIMITE_HISTORIAL = 200;
+
     // ── Cargar total del día ──────────────────
     async function cargarTotalDia() {
         try {
-            const res = await fetch('ajax/historial.php?hoy=1');
+            const res = await fetch('ajax/historial.php?hoy=1' + paramSucursal());
             const data = await res.json();
             if (data.success) {
                 const el = $('#total-dia');
@@ -647,16 +668,26 @@ const App = (() => {
         const body = $('#modal-body');
         const title = $('#modal-title');
 
-        title.textContent = 'Historial de Ventas';
+        // Historial del día: el encargado ve todas las cajas que tiene a cargo;
+        // caja y admin, solo la caja activa. El backend limita a hoy a los no-admin.
+        const esEncargado = document.body.dataset.usuarioRol === 'encargado';
+        const filtroSucursal = esEncargado ? '' : paramSucursal();
+
+        title.textContent = esEncargado ? 'Ventas de hoy — tus cajas' : 'Ventas de hoy';
         body.innerHTML = '<p style="color:var(--color-text-muted)">Cargando...</p>';
         overlay.classList.add('active');
 
         try {
-            const res = await fetch('ajax/historial.php');
+            const res = await fetch(`ajax/historial.php?solo_hoy=1&limit=${LIMITE_HISTORIAL}` + filtroSucursal);
             const data = await res.json();
 
-            if (data.success && data.data.length > 0) {
-                let html = `
+            if (!data.success) {
+                body.innerHTML = `<p style="color:var(--color-danger);text-align:center;padding:2rem;">${escapeHtml(data.error || 'No se pudo cargar el historial')}</p>`;
+            } else if (data.data.length > 0) {
+                let html = data.data.length >= LIMITE_HISTORIAL
+                    ? `<p style="color:var(--color-text-muted);font-size:0.85rem;margin-bottom:0.75rem;">Se muestran las últimas ${LIMITE_HISTORIAL} ventas de hoy.</p>`
+                    : '';
+                html += `
                     <table class="history-table">
                         <thead>
                             <tr>
@@ -692,7 +723,7 @@ const App = (() => {
                 html += '</tbody></table>';
                 body.innerHTML = html;
             } else {
-                body.innerHTML = '<p style="color:var(--color-text-muted);text-align:center;padding:2rem;">No hay ventas registradas aún.</p>';
+                body.innerHTML = '<p style="color:var(--color-text-muted);text-align:center;padding:2rem;">Todavía no hay ventas hoy.</p>';
             }
         } catch (err) {
             body.innerHTML = '<p style="color:var(--color-danger)">Error al cargar historial</p>';

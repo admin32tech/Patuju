@@ -38,7 +38,7 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
             </div>
             <div style="display:flex;align-items:center;gap:0.4rem;padding:0.35rem 0.8rem;background:var(--color-surface-2);border-radius:var(--radius-full);font-size:0.85rem;color:var(--color-primary-ink);">
                 <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#user"></use></svg>
-                <span><?= htmlspecialchars($usuarioNombre) ?> (Encargado)</span>
+                <span><?= htmlspecialchars($usuarioNombre) ?> (<?= $rol === 'admin' ? 'Administrador' : 'Encargado' ?>)</span>
             </div>
             <span class="topbar__clock" id="clock">00:00:00</span>
             <?php if ($sucursalId > 0): ?>

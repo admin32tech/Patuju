@@ -21,16 +21,22 @@ $sucSesion = (int) ($_SESSION['sucursal_id'] ?? 0);
 $db = getDB();
 
 try {
-    $params = [];
+    // Admin ve todos; encargado ve todas sus sucursales asignadas; caja solo la suya
+    if ($rol !== 'admin') {
+        $asignadas = obtenerSucursalesAsignadas();
 
-    // Admin ve todos, roles con sucursal solo la suya
-    if ($rol !== 'admin' && $sucSesion) {
-        $stmtLastVenta = $db->prepare("
-            SELECT MAX(fecha) AS last_venta
-            FROM ventas
-            WHERE sucursal_id = ?
-        ");
-        $stmtLastVenta->execute([$sucSesion]);
+        if (!empty($asignadas)) {
+            $placeholders = implode(',', array_fill(0, count($asignadas), '?'));
+            $stmtLastVenta = $db->prepare("
+                SELECT MAX(fecha) AS last_venta
+                FROM ventas
+                WHERE sucursal_id IN ($placeholders)
+            ");
+            $stmtLastVenta->execute($asignadas);
+        } else {
+            $stmtLastVenta = $db->prepare("SELECT MAX(fecha) AS last_venta FROM ventas WHERE 1=0");
+            $stmtLastVenta->execute();
+        }
     } else {
         $stmtLastVenta = $db->prepare("SELECT MAX(fecha) AS last_venta FROM ventas");
         $stmtLastVenta->execute();

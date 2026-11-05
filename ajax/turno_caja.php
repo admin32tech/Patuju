@@ -34,9 +34,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 $params[] = (int) $_GET['sucursal_id'];
             }
         } else {
-            // Encargado solo ve su sucursal
-            $where[] = "t.sucursal_id = ?";
-            $params[] = $sucursalId;
+            // Encargado ve todas sus sucursales asignadas (N:M);
+            // un sucursal_id manipulado (0, 'abc', ajena) responde 403
+            $filtroSuc = sucursalSolicitadaPermitida($_GET['sucursal_id'] ?? null);
+            $asignadas = obtenerSucursalesAsignadas();
+
+            if ($filtroSuc !== null) {
+                $where[] = "t.sucursal_id = ?";
+                $params[] = $filtroSuc;
+            } elseif (!empty($asignadas)) {
+                $placeholders = implode(',', array_fill(0, count($asignadas), '?'));
+                $where[] = "t.sucursal_id IN ($placeholders)";
+                $params = array_merge($params, $asignadas);
+            } else {
+                $where[] = "1=0";
+            }
         }
 
         if (!empty($_GET['estado'])) {
@@ -87,6 +99,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $sucQ  = isset($_GET['sucursal_id']) ? (int) $_GET['sucursal_id'] : $sucursalId;
         $userQ = isset($_GET['usuario_id'])  ? (int) $_GET['usuario_id']  : $usuarioId;
     } else {
+        // Caja y encargado solo consultan su propio turno: pedir otro responde 403
+        // (is_string descarta arrays como sucursal_id[]=1, que también cuentan como manipulación)
+        $pideOtraSuc  = isset($_GET['sucursal_id']) && (!is_string($_GET['sucursal_id']) || $_GET['sucursal_id'] !== (string) $sucursalId);
+        $pideOtroUser = isset($_GET['usuario_id'])  && (!is_string($_GET['usuario_id'])  || $_GET['usuario_id']  !== (string) $usuarioId);
+        if ($pideOtraSuc || $pideOtroUser) {
+            jsonResponse(['success' => false, 'error' => 'Solo puedes consultar tu propio turno'], 403);
+        }
         $sucQ  = $sucursalId;
         $userQ = $usuarioId;
     }

@@ -23,18 +23,20 @@ try {
         echo "<p style='color:gray;'>La columna 'usuario_id' ya existe.</p>";
     }
 
-    // 2. Verificar y resetear contraseña de admin si es necesario
+    // 2. Fijar contraseña de admin solo si no tiene un hash utilizable
+    //    (una clave ya cambiada por el usuario nunca se restablece)
     echo "<p>Verificando usuario <b>admin</b>...</p>";
     $stmt = $db->query("SELECT id, password_hash FROM usuarios WHERE username = 'admin' LIMIT 1");
     $admin = $stmt->fetch();
 
     if ($admin) {
-        if (!password_verify('patuju2024', $admin['password_hash'])) {
+        $hashActual = (string) ($admin['password_hash'] ?? '');
+        if ($hashActual === '' || empty(password_get_info($hashActual)['algo'])) {
             $hashValido = password_hash('patuju2024', PASSWORD_BCRYPT);
             $db->prepare("UPDATE usuarios SET password_hash = ? WHERE id = ?")->execute([$hashValido, $admin['id']]);
-            echo "<p style='color:green;'>Contraseña de admin reseteada a 'patuju2024' con Hash Bcrypt válido.</p>";
+            echo "<p style='color:green;'>La contraseña de admin estaba vacía o sin un hash reconocible: se fijó 'patuju2024' (Bcrypt). Cámbiala tras iniciar sesión.</p>";
         } else {
-            echo "<p style='color:gray;'>La contraseña de admin ya está correcta (Bcrypt).</p>";
+            echo "<p style='color:gray;'>La contraseña de admin ya tiene un hash válido; no se modifica.</p>";
         }
     }
 
@@ -75,6 +77,54 @@ try {
     $stmtAdmin = $db->prepare("UPDATE usuarios SET sucursal_id = ? WHERE rol = 'admin' AND (sucursal_id IS NULL OR sucursal_id <> ?)");
     $stmtAdmin->execute([$suc000Id, $suc000Id]);
     echo "<p style='color:green;'>Usuarios admin actualizados (afectados: " . $stmtAdmin->rowCount() . ").</p>";
+
+    // 7. Verificar y crear tabla 'usuario_sucursales' (N:M para Encargados)
+    echo "<p>Verificando tabla <b>usuario_sucursales</b>...</p>";
+    $tablaUsExistia = $db->query("SHOW TABLES LIKE 'usuario_sucursales'")->fetchColumn() !== false;
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS usuario_sucursales (
+            id          INT AUTO_INCREMENT PRIMARY KEY,
+            usuario_id  INT NOT NULL,
+            sucursal_id INT NOT NULL,
+            created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_user_suc (usuario_id, sucursal_id),
+            FOREIGN KEY (usuario_id)  REFERENCES usuarios(id)   ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY (sucursal_id) REFERENCES sucursales(id) ON DELETE CASCADE ON UPDATE CASCADE,
+            INDEX idx_us_user (usuario_id),
+            INDEX idx_us_suc  (sucursal_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    echo "<p style='color:green;'>Tabla 'usuario_sucursales' verificada/creada.</p>";
+
+    // 8. Sembrar asignaciones iniciales solo si la tabla se acaba de crear
+    //    (si ya existía, aunque esté vacía, se respetan las asignaciones actuales)
+    echo "<p>Verificando asignaciones de sucursales para encargados...</p>";
+    if (!$tablaUsExistia) {
+        $distribucionEncargados = [
+            'encargado_encargado_central'    => [1, 2, 3, 4, 5],
+            'encargado_encargado_cochabamba'  => [6, 7],
+            'encargado_encargado_santa_cruz'  => [8, 9, 10, 11, 12, 13, 14, 15],
+        ];
+
+        $stmtInsUS = $db->prepare("INSERT IGNORE INTO usuario_sucursales (usuario_id, sucursal_id) VALUES (?, ?)");
+        $totalAsignados = 0;
+        foreach ($distribucionEncargados as $uName => $sucList) {
+            // Solo usuarios que sigan siendo encargados (la N:M no aplica a caja/admin)
+            $uStmt = $db->prepare("SELECT id FROM usuarios WHERE username = ? AND rol = 'encargado' LIMIT 1");
+            $uStmt->execute([$uName]);
+            $uId = $uStmt->fetchColumn();
+            if ($uId) {
+                foreach ($sucList as $sId) {
+                    $stmtInsUS->execute([$uId, $sId]);
+                    $totalAsignados += $stmtInsUS->rowCount();
+                }
+            }
+        }
+        echo "<p style='color:green;'>Asignaciones iniciales de encargados sembradas ({$totalAsignados} relaciones).</p>";
+    } else {
+        $countUs = (int)$db->query("SELECT COUNT(*) FROM usuario_sucursales")->fetchColumn();
+        echo "<p style='color:gray;'>La tabla 'usuario_sucursales' ya existía: se respetan las asignaciones actuales ({$countUs} registros).</p>";
+    }
 
     echo "<h3>¡Actualización completada exitosamente!</h3>";
     echo "<p>Ahora puedes volver al <a href='login.php'>Login</a>.</p>";

@@ -16,12 +16,27 @@ $rol        = $_SESSION['usuario_rol'];
 $sucSesion  = (int) ($_SESSION['sucursal_id'] ?? 0);
 $usuarioId  = (int) $_SESSION['usuario_id'];
 
+function productoExiste(PDO $db, int $productoId): bool
+{
+    $stmt = $db->prepare('SELECT 1 FROM productos WHERE id = ?');
+    $stmt->execute([$productoId]);
+
+    return (bool) $stmt->fetchColumn();
+}
+
 // ── GET: consultar stock o movimientos ─────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    // Determinar sucursal a consultar
-    if ($rol === 'admin' || $rol === 'encargado') {
-        $sucId = isset($_GET['sucursal_id']) && $_GET['sucursal_id'] !== '' ? (int) $_GET['sucursal_id'] : ($sucSesion ?: null);
+    // Determinar sucursal a consultar. Un sucursal_id manipulado (0, 'abc', 1.5,
+    // o una sucursal que no le corresponde) responde 403 para cualquier rol.
+    $sucSolicitada = sucursalSolicitadaPermitida($_GET['sucursal_id'] ?? null);
+    if ($rol === 'admin') {
+        // Sin filtro, el admin ve el consolidado de todas: su sesión trae SUC-000,
+        // que no debe usarse como filtro implícito
+        $sucId = $sucSolicitada;
+    } elseif ($rol === 'encargado') {
+        $sucId = $sucSolicitada ?? ($sucSesion ?: null);
     } else {
+        // La caja solo consulta su sucursal (pedir otra ya respondió 403 arriba)
         $sucId = $sucSesion;
     }
 
@@ -29,9 +44,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if (isset($_GET['resumen_sucursales'])) {
         $whereSuc = "";
         $paramsSuc = [];
-        if ($rol !== 'admin' && $sucSesion > 0 && empty($_GET['todas'])) {
-            $whereSuc = "AND s.id = ?";
-            $paramsSuc[] = $sucSesion;
+        // BD sin migrar: sin tabla N:M solo se listan los encargados por sucursal principal
+        $unionAsignadas = existeTablaUsuarioSucursales()
+            ? "UNION
+                    SELECT us.sucursal_id, u.nombre_display FROM usuario_sucursales us JOIN usuarios u ON u.id = us.usuario_id WHERE u.rol = 'encargado' AND u.activo = 1"
+            : "";
+        if ($rol !== 'admin') {
+            $asignadas = obtenerSucursalesAsignadas();
+            if (empty($asignadas)) {
+                $whereSuc = "AND 1=0";
+            } else {
+                $placeholders = implode(',', array_fill(0, count($asignadas), '?'));
+                $whereSuc = "AND s.id IN ($placeholders)";
+                $paramsSuc = $asignadas;
+            }
         }
 
         $sqlResumen = "
@@ -53,8 +79,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             FROM sucursales s
             LEFT JOIN (
                 SELECT sucursal_id, GROUP_CONCAT(DISTINCT nombre_display SEPARATOR ', ') AS encargado_nombre
-                FROM usuarios
-                WHERE rol = 'encargado' AND activo = 1
+                FROM (
+                    SELECT sucursal_id, nombre_display FROM usuarios WHERE rol = 'encargado' AND activo = 1 AND sucursal_id IS NOT NULL
+                    {$unionAsignadas}
+                ) enc_unificados
                 GROUP BY sucursal_id
             ) u_enc ON u_enc.sucursal_id = s.id
             LEFT JOIN (
@@ -100,6 +128,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         ]);
     }
 
+    // Fuera de admin toda consulta exige una sucursal válida y permitida
+    // (sucursal_id=0 / 'abc' / sin sucursal en sesión → 403, nunca "todas")
+    if ($rol !== 'admin' && ((int) $sucId <= 0 || !puede('ver_sucursal', (int) $sucId))) {
+        jsonResponse(['success' => false, 'error' => 'No tienes permisos para consultar esta sucursal'], 403);
+    }
+
     // Historial de movimientos
     if (isset($_GET['movimientos'])) {
         if ($sucId) {
@@ -115,6 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             ");
             $stmtMov->execute([$sucId]);
         } else {
+            // Sin filtro (todas las sucursales): solo alcanzable por admin
             $stmtMov = $db->prepare("
                 SELECT sm.*, p.nombre AS producto_nombre, u.nombre_display AS usuario_nombre, s.nombre AS sucursal_nombre
                 FROM stock_movimientos sm
@@ -131,7 +166,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     // Listado de stock de productos (Fase 2: Catálogo completo visible por sucursal)
     if (!$sucId) {
-        // Admin sin filtro → todas las sucursales
+        // Admin sin filtro → todas las sucursales (el resto de roles ya respondió 403 arriba)
         $stmt = $db->prepare("
             SELECT su.id AS sucursal_id, su.nombre AS sucursal_nombre,
                    p.id AS producto_id,  p.nombre  AS producto_nombre, p.imagen,
@@ -190,14 +225,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $input  = json_decode(file_get_contents('php://input'), true);
     $accion = $input['accion'] ?? 'ajuste';
 
-    // Determinar sucursal destino
-    if ($rol === 'admin' && !empty($input['sucursal_id'])) {
-        $sucId = (int) $input['sucursal_id'];
-    } elseif ($sucSesion) {
-        $sucId = $sucSesion;
-    } else {
-        jsonResponse(['success' => false, 'error' => 'Sin sucursal asociada'], 403);
+    // Determinar sucursal destino y validar permisos
+    // sucursal_id manipulado (0, 'abc', ajena) → 403; sin él, la sucursal de la sesión
+    $sucIdDestino = sucursalSolicitadaPermitida($input['sucursal_id'] ?? null, 'editar_stock') ?? $sucSesion;
+    if (!$sucIdDestino) {
+        jsonResponse(['success' => false, 'error' => 'Sin sucursal asociada'], 400);
     }
+    if (!puede('editar_stock', $sucIdDestino)) {
+        jsonResponse(['success' => false, 'error' => 'No tienes permisos para modificar el inventario de esta sucursal'], 403);
+    }
+    $sucId = $sucIdDestino;
 
     // ── ACCIÓN: INGRESO DE LOTE (Sumar stock por recepción / horneada) ─────
     if ($accion === 'ingreso_lote') {
@@ -206,6 +243,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($items) || !is_array($items)) {
             jsonResponse(['success' => false, 'error' => 'Lista de items vacía'], 400);
+        }
+
+        $itemsValidos = [];
+        foreach ($items as $item) {
+            $prodId   = (int) ($item['producto_id'] ?? 0);
+            $cantidad = (int) ($item['cantidad'] ?? 0);
+
+            if ($prodId <= 0 || $cantidad <= 0) {
+                continue;
+            }
+
+            if (!productoExiste($db, $prodId)) {
+                jsonResponse(['success' => false, 'error' => "El producto ID #{$prodId} no existe"], 400);
+            }
+
+            $itemsValidos[] = ['producto_id' => $prodId, 'cantidad' => $cantidad];
+        }
+
+        if (empty($itemsValidos)) {
+            jsonResponse(['success' => false, 'error' => 'No hay items válidos para procesar'], 400);
         }
 
         try {
@@ -224,13 +281,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ");
 
             $totalIngresado = 0;
-            foreach ($items as $item) {
-                $prodId   = (int) ($item['producto_id'] ?? 0);
-                $cantidad = (int) ($item['cantidad'] ?? 0);
-
-                if ($prodId <= 0 || $cantidad <= 0) {
-                    continue;
-                }
+            foreach ($itemsValidos as $item) {
+                $prodId   = (int) $item['producto_id'];
+                $cantidad = (int) $item['cantidad'];
 
                 // Obtener stock actual
                 $stmtSelect->execute([$sucId, $prodId]);
@@ -340,6 +393,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($productoId <= 0) {
             jsonResponse(['success' => false, 'error' => 'producto_id es requerido'], 400);
         }
+        if (!productoExiste($db, $productoId)) {
+            jsonResponse(['success' => false, 'error' => "El producto ID #{$productoId} no existe"], 400);
+        }
 
         try {
             $stmtDisp = $db->prepare("
@@ -417,6 +473,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$productoId) {
             jsonResponse(['success' => false, 'error' => 'producto_id es requerido'], 400);
+        }
+        if (!productoExiste($db, $productoId)) {
+            jsonResponse(['success' => false, 'error' => "El producto ID #{$productoId} no existe"], 400);
         }
 
         if ($cantidad !== null && $cantidad < 0) {

@@ -30,7 +30,7 @@ $sucursalId = $_SESSION['sucursal_id'] ?? 0;
     <link rel="stylesheet" href="assets/css/styles.css">
     <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
 </head>
-<body data-sucursal-id="<?= $sucursalId ?>" data-sucursal-nombre="<?= htmlspecialchars($sucursalNombre) ?>">
+<body data-sucursal-id="<?= $sucursalId ?>" data-sucursal-nombre="<?= htmlspecialchars($sucursalNombre) ?>" data-usuario-rol="<?= htmlspecialchars($_SESSION['usuario_rol']) ?>">
 
 <div class="app">
 

@@ -20,6 +20,7 @@ DROP TABLE IF EXISTS turnos_caja;
 DROP TABLE IF EXISTS stock_movimientos;
 DROP TABLE IF EXISTS stock_sucursal;
 DROP TABLE IF EXISTS productos;
+DROP TABLE IF EXISTS usuario_sucursales;
 DROP TABLE IF EXISTS usuarios;
 DROP TABLE IF EXISTS sucursales;
 DROP TABLE IF EXISTS categorias;
@@ -91,6 +92,19 @@ CREATE TABLE usuarios (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
+-- 4b. Tabla: usuario_sucursales (Relación N:M Encargados ↔ Sucursales)
+CREATE TABLE usuario_sucursales (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    sucursal_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_user_suc (usuario_id, sucursal_id),
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (sucursal_id) REFERENCES sucursales(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    INDEX idx_us_user (usuario_id),
+    INDEX idx_us_suc (sucursal_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 5. Tabla: stock_sucursal (Inventario y precios por sucursal)
 -- ------------------------------------------------------------
 CREATE TABLE stock_sucursal (

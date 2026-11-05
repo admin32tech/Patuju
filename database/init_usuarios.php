@@ -8,6 +8,7 @@
  * Contraseña: patuju2024 (todos los usuarios)
  * 
  * ⚠️  Requiere que schema.sql ya esté importado (tablas + sucursales deben existir)
+ * ⚠️  Restablece la contraseña de los usuarios semilla: solo para instalaciones nuevas, no para migrar
  */
 
 require_once __DIR__ . '/../config/database.php';
@@ -23,6 +24,9 @@ try {
     $db = getDB();
     $password = 'patuju2024';
     $hash = password_hash($password, PASSWORD_BCRYPT);
+
+    echo "⚠️  AVISO: este script RESTABLECE la contraseña de los usuarios semilla (admin, encargados y cajas) a '$password'.\n";
+    echo "   Es para instalaciones nuevas, no para migrar una BD en uso (para eso usa actualizar_bd.php).\n\n";
 
     echo "🔑 Contraseña: $password\n";
     echo "🔒 Hash generado: $hash\n";
@@ -69,11 +73,13 @@ try {
 
     $insertados = 0;
     $actualizados = 0;
+    $recienInsertados = []; // username => true (rowCount() === 1 en el upsert)
 
     foreach ($usuarios as $u) {
         $stmt->execute([$u[0], $hash, $u[1], $u[2], $u[3]]);
         if ($stmt->rowCount() === 1) {
             $insertados++;
+            $recienInsertados[$u[0]] = true;
             echo "  ➕ Insertado: {$u[0]} ({$u[2]})\n";
         } elseif ($stmt->rowCount() === 2) {
             // ON DUPLICATE KEY UPDATE cuenta como 2 rows affected
@@ -81,6 +87,48 @@ try {
             echo "  🔄 Actualizado hash: {$u[0]} ({$u[2]})\n";
         } else {
             echo "  ⏭️  Sin cambios: {$u[0]}\n";
+        }
+    }
+
+    // ── Asignación de Sucursales a Encargados (N:M) ───────────────────
+    $tablaUsExistia = $db->query("SHOW TABLES LIKE 'usuario_sucursales'")->fetchColumn() !== false;
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS usuario_sucursales (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            usuario_id INT NOT NULL,
+            sucursal_id INT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_user_suc (usuario_id, sucursal_id),
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY (sucursal_id) REFERENCES sucursales(id) ON DELETE CASCADE ON UPDATE CASCADE,
+            INDEX idx_us_user (usuario_id),
+            INDEX idx_us_suc (sucursal_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    $distribucionEncargados = [
+        'encargado_encargado_central'    => [1, 2, 3, 4, 5],
+        'encargado_encargado_cochabamba'  => [6, 7],
+        'encargado_encargado_santa_cruz'  => [8, 9, 10, 11, 12, 13, 14, 15],
+    ];
+
+    $stmtAsig = $db->prepare("INSERT IGNORE INTO usuario_sucursales (usuario_id, sucursal_id) VALUES (?, ?)");
+    echo "\n🏢 Asignando sucursales a encargados:\n";
+    foreach ($distribucionEncargados as $uName => $sucursalesIds) {
+        // Solo se siembra si la tabla se acaba de crear o el encargado se acaba de insertar;
+        // en otro caso se respetan las asignaciones hechas desde el panel.
+        if ($tablaUsExistia && !isset($recienInsertados[$uName])) {
+            echo "  ⏭️  {$uName}: ya existía, se respetan sus asignaciones actuales\n";
+            continue;
+        }
+        $uStmt = $db->prepare("SELECT id FROM usuarios WHERE username = ? AND rol = 'encargado' LIMIT 1");
+        $uStmt->execute([$uName]);
+        $uId = $uStmt->fetchColumn();
+        if ($uId) {
+            foreach ($sucursalesIds as $sId) {
+                $stmtAsig->execute([$uId, $sId]);
+            }
+            echo "  📍 {$uName} → Sucursales: " . implode(', ', $sucursalesIds) . "\n";
         }
     }
 

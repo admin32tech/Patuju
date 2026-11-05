@@ -3,7 +3,7 @@ require_once __DIR__ . '/config/auth.php';
 verificarSesion('admin');
 
 $db = getDB();
-$sucursales = $db->query("SELECT id, nombre, direccion FROM sucursales WHERE activo = 1 ORDER BY id ASC")->fetchAll();
+$sucursales = $db->query("SELECT id, nombre, direccion, es_interna FROM sucursales WHERE activo = 1 ORDER BY id ASC")->fetchAll();
 
 /** Icono del sprite SVG local */
 function ic(string $name): string {
@@ -46,6 +46,7 @@ function opcionesSucursales(array $sucursales): string {
             <button type="button" class="btn-tab" id="tab-btn-auditoria-ventas" onclick="Admin.cambiarTab('auditoria-ventas')"><?= ic('list') ?> Auditoría de ventas</button>
             <button type="button" class="btn-tab" id="tab-btn-auditoria-turnos" onclick="Admin.cambiarTab('auditoria-turnos')"><?= ic('clock') ?> Cierres de turno</button>
             <button type="button" class="btn-tab" id="tab-btn-analytics" onclick="Admin.cambiarTab('analytics')"><?= ic('trend') ?> Analítica</button>
+            <button type="button" class="btn-tab" id="tab-btn-usuarios" onclick="Admin.cambiarTab('usuarios')"><?= ic('user') ?> Gestión de usuarios</button>
         </nav>
 
         <div class="admin-sidebar__foot">
@@ -314,6 +315,138 @@ function opcionesSucursales(array $sucursales): string {
                 </div>
             </section>
 
+            <!-- PESTAÑA 6: GESTIÓN DE USUARIOS Y ASIGNACIÓN DE SUCURSALES -->
+            <section id="tab-content-usuarios" class="tab-content" style="display:none;">
+                <div class="kpi-grid" style="margin-bottom: 1.5rem;">
+                    <div class="kpi-card">
+                        <div class="kpi-card__info">
+                            <div class="kpi-card__title">Total usuarios</div>
+                            <div class="kpi-card__value" id="kpi-usr-total">0</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-card__info">
+                            <div class="kpi-card__title">Usuarios activos</div>
+                            <div class="kpi-card__value" id="kpi-usr-activos">0</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-card__info">
+                            <div class="kpi-card__title">Encargados (Supervisores)</div>
+                            <div class="kpi-card__value" id="kpi-usr-encargados" style="color:var(--color-primary-ink);">0</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-card__info">
+                            <div class="kpi-card__title">Cajeros (POS)</div>
+                            <div class="kpi-card__value" id="kpi-usr-cajeros">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filter-bar filter-bar--spaced">
+                    <div>
+                        <label for="filtro-usr-rol" class="field-label">Filtrar por rol</label>
+                        <select id="filtro-usr-rol" class="field" onchange="AdminUsuarios.filtrar()">
+                            <option value="">Todos los roles</option>
+                            <option value="admin">Administrador</option>
+                            <option value="encargado">Encargado (Supervisor)</option>
+                            <option value="caja">Cajero (Caja)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="filtro-usr-busqueda" class="field-label">Buscar usuario</label>
+                        <input type="text" id="filtro-usr-busqueda" class="field" placeholder="Nombre o usuario..." oninput="AdminUsuarios.filtrar()">
+                    </div>
+                    <div class="filter-bar__spacer"></div>
+                    <button type="button" class="btn" onclick="AdminUsuarios.cargar()"><?= ic('refresh') ?> Refrescar</button>
+                    <button type="button" class="btn btn--primary" onclick="AdminUsuarios.abrirFormularioNuevo()"><?= ic('plus') ?> Nuevo usuario</button>
+                </div>
+
+                <div class="admin-grid">
+                    <!-- Formulario de Usuario -->
+                    <div class="admin-form" id="usr-form-container">
+                        <h3 class="admin-form__title" id="usr-form-title">Nuevo Usuario</h3>
+                        <form id="usr-form" onsubmit="AdminUsuarios.guardar(event)">
+                            <input type="hidden" id="usr-id" value="">
+                            
+                            <div class="form-group">
+                                <label for="usr-username">Usuario (Login) *</label>
+                                <input type="text" id="usr-username" placeholder="ej: encargado_norte" required autocomplete="off">
+                                <small style="display:block;margin-top:0.25rem;font-size:0.75rem;color:var(--color-text-dim);">Solo letras, números, guiones y puntos.</small>
+                            </div>
+
+                            <div class="form-group" id="wrap-usr-password">
+                                <label for="usr-password">Contraseña *</label>
+                                <input type="password" id="usr-password" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="usr-nombre">Nombre y Apellido *</label>
+                                <input type="text" id="usr-nombre" placeholder="ej: Juan Pérez" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="usr-rol">Rol del usuario *</label>
+                                <select id="usr-rol" class="field" required onchange="AdminUsuarios.alCambiarRol()">
+                                    <option value="caja">Cajero (Solo Caja POS de su sucursal)</option>
+                                    <option value="encargado">Encargado (Gestión de Stock y múltiples sucursales)</option>
+                                    <option value="admin">Administrador General (Acceso total)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group" id="wrap-usr-sucursal">
+                                <label for="usr-sucursal-principal">Sucursal principal *</label>
+                                <select id="usr-sucursal-principal" class="field" required>
+                                    <option value="">Selecciona una sucursal...</option>
+                                    <?= opcionesSucursales(array_filter($sucursales, fn($s) => empty($s['es_interna']))) ?>
+                                </select>
+                                <small style="display:block;margin-top:0.25rem;font-size:0.75rem;color:var(--color-text-dim);">Sede física asignada por defecto.</small>
+                            </div>
+
+                            <div class="form-group" id="wrap-usr-activo">
+                                <label for="usr-activo">Estado</label>
+                                <select id="usr-activo" class="field">
+                                    <option value="1">Activo (Puede iniciar sesión)</option>
+                                    <option value="0">Inactivo (Acceso bloqueado)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn--primary" id="usr-form-submit"><?= ic('save') ?> Guardar usuario</button>
+                                <button type="button" class="btn" id="usr-form-cancel" style="display:none;" onclick="AdminUsuarios.limpiarFormulario()">Cancelar</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Tabla de Usuarios -->
+                    <div class="admin-table-wrap">
+                        <div class="admin-table-wrap__header admin-table-wrap__header--split">
+                            <span>Usuarios del sistema</span>
+                            <span id="usr-contador" style="font-size:0.85rem;color:var(--color-text-muted);">Cargando...</span>
+                        </div>
+                        <div class="admin-table-wrap__body" style="overflow-x:auto;">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Usuario</th>
+                                        <th>Rol</th>
+                                        <th>Sucursal principal</th>
+                                        <th>Sucursales a cargo</th>
+                                        <th class="col-center">Estado</th>
+                                        <th>Último login</th>
+                                        <th class="col-center col-w120">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="usr-admin-tbody">
+                                    <tr><td colspan="7" class="admin-empty-row">Cargando usuarios...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
         </div>
     </main>
 </div>
@@ -346,6 +479,65 @@ function opcionesSucursales(array $sucursales): string {
                 </div>
             </div>
             <button type="button" onclick="AdminAnalytics.descargarReporte()" class="btn btn--primary btn--block"><?= ic('download') ?> Descargar reporte (CSV)</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Asignar múltiples sucursales a un Encargado -->
+<div class="modal-overlay" id="modal-asignar-sucursales">
+    <div class="modal" style="max-width: 680px;" role="dialog" aria-modal="true" aria-labelledby="modal-asig-titulo">
+        <div class="modal__header">
+            <div>
+                <h3 class="modal__title" id="modal-asig-titulo">Asignar Sucursales a Encargado</h3>
+                <div id="modal-asig-subtitulo" style="font-size: 0.85rem; color: var(--color-text-muted); margin-top: 0.2rem;">
+                    Selecciona las sucursales que este encargado podrá supervisar y modificar stock.
+                </div>
+            </div>
+            <button type="button" class="modal__close" aria-label="Cerrar" onclick="AdminUsuarios.cerrarModalSucursales()"><?= ic('x') ?></button>
+        </div>
+        <div class="modal__body modal__body--pad">
+            <input type="hidden" id="asig-usuario-id" value="">
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding-bottom:0.75rem; border-bottom:1px solid var(--color-border);">
+                <span id="asig-seleccionadas-label" style="font-weight:600; font-size:0.9rem;">0 seleccionadas</span>
+                <div style="display:flex; gap:0.5rem;">
+                    <button type="button" class="btn btn--sm" onclick="AdminUsuarios.seleccionarTodasSucursales(true)">Seleccionar todas</button>
+                    <button type="button" class="btn btn--sm" onclick="AdminUsuarios.seleccionarTodasSucursales(false)">Deseleccionar todas</button>
+                </div>
+            </div>
+
+            <div id="asig-sucursales-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap:0.75rem; max-height:360px; overflow-y:auto; padding-right:0.25rem;">
+                <!-- Generado dinámicamente por JS con checkboxes estilizados -->
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:0.75rem; margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--color-border);">
+                <button type="button" class="btn" onclick="AdminUsuarios.cerrarModalSucursales()">Cancelar</button>
+                <button type="button" class="btn btn--primary" onclick="AdminUsuarios.guardarAsignacionSucursales()"><?= ic('save') ?> Guardar asignación</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Restablecer Contraseña -->
+<div class="modal-overlay" id="modal-reset-password">
+    <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="modal-reset-titulo">
+        <div class="modal__header">
+            <div>
+                <h3 class="modal__title" id="modal-reset-titulo">Restablecer Contraseña</h3>
+                <div id="modal-reset-usuario-sub" style="font-size: 0.85rem; color: var(--color-text-muted); margin-top: 0.2rem;"></div>
+            </div>
+            <button type="button" class="modal__close" aria-label="Cerrar" onclick="AdminUsuarios.cerrarModalPassword()"><?= ic('x') ?></button>
+        </div>
+        <div class="modal__body modal__body--pad">
+            <input type="hidden" id="reset-usuario-id" value="">
+            <div class="form-group" style="margin-bottom:1rem;">
+                <label for="reset-nueva-password">Nueva contraseña</label>
+                <input type="text" id="reset-nueva-password" class="field" placeholder="Mínimo 6 caracteres" autocomplete="off">
+            </div>
+            <div style="margin-bottom:1.5rem; display:flex; gap:0.5rem;">
+                <button type="button" class="btn btn--sm" onclick="AdminUsuarios.generarPasswordAleatoria()">Generar aleatoria</button>
+            </div>
+            <button type="button" class="btn btn--primary btn--block" onclick="AdminUsuarios.confirmarResetPassword()"><?= ic('check') ?> Confirmar restablecimiento</button>
         </div>
     </div>
 </div>
