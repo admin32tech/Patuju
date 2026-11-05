@@ -286,14 +286,23 @@ const App = (() => {
         try {
             const res = await fetch('ajax/turno_caja.php');
             const data = await res.json();
+            // Historial queda deshabilitado mientras no haya turno abierto
+            // (su modal quedaría oculto detrás de Apertura de Caja)
+            const btnHistorial = $('#btn-historial');
             if (data.success && data.turno) {
                 turnoActual = data.turno;
+                document.body.classList.remove('turno-bloqueado');
+                if (btnHistorial) btnHistorial.disabled = false;
                 const btn = $('#btn-turno');
                 if(btn) btn.innerHTML = svgIcon('clock') + ' Turno (Abierto)';
             } else {
                 turnoActual = null;
                 const modal = $('#modal-abrir-turno');
-                if(modal) modal.classList.add('active');
+                if(modal) {
+                    modal.classList.add('active');
+                    document.body.classList.add('turno-bloqueado');
+                    if (btnHistorial) btnHistorial.disabled = true;
+                }
             }
         } catch (e) {
             console.error(e);
@@ -628,6 +637,12 @@ const App = (() => {
 
     // ── Ver Historial ─────────────────────────
     async function verHistorial() {
+        // Con el turno bloqueado el modal quedaría oculto tras Apertura de Caja
+        if (document.body.classList.contains('turno-bloqueado')) {
+            toast('Debes abrir un turno primero', 'error');
+            return;
+        }
+
         const overlay = $('#modal-overlay');
         const body = $('#modal-body');
         const title = $('#modal-title');

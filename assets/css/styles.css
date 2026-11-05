@@ -121,6 +121,18 @@ body {
     z-index: 100;
 }
 
+body.turno-bloqueado .topbar {
+    position: relative;
+    z-index: 1100;
+}
+
+/* Historial no disponible hasta abrir turno; Salir, Sucursal y Admin siguen operativos */
+body.turno-bloqueado #btn-historial,
+#btn-historial:disabled {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
 .topbar__brand {
     display: flex;
     align-items: center;
