@@ -5,23 +5,17 @@
  * Copiar .env.example → .env y ajustar los valores.
  */
 
-// Cargar variables de entorno desde .env (un nivel arriba de config/)
-$envFile = __DIR__ . '/../.env';
-if (file_exists($envFile)) {
-    $env = parse_ini_file($envFile);
-    define('DB_HOST',    $env['DB_HOST']    ?? 'localhost');
-    define('DB_NAME',    $env['DB_NAME']    ?? 'patuju_pos');
-    define('DB_USER',    $env['DB_USER']    ?? 'root');
-    define('DB_PASS',    $env['DB_PASS']    ?? '');
-    define('DB_CHARSET', $env['DB_CHARSET'] ?? 'utf8mb4');
-} else {
-    // Fallback para entornos de desarrollo sin .env
-    define('DB_HOST',    'localhost');
-    define('DB_NAME',    'patuju_pos');
-    define('DB_USER',    'root');
-    define('DB_PASS',    '');
-    define('DB_CHARSET', 'utf8mb4');
-}
+// Cargar variables de entorno desde .env (un nivel arriba de config/).
+// PATUJU_ENV_FILE permite apuntar a un archivo alterno (p. ej. la suite de tests).
+$envFile = getenv('PATUJU_ENV_FILE') ?: __DIR__ . '/../.env';
+$env = file_exists($envFile) ? parse_ini_file($envFile) : [];
+
+// PATUJU_DB_* tiene prioridad sobre el archivo, útil para CI y contenedores.
+define('DB_HOST',    getenv('PATUJU_DB_HOST') ?: ($env['DB_HOST'] ?? 'localhost'));
+define('DB_NAME',    getenv('PATUJU_DB_NAME') ?: ($env['DB_NAME'] ?? 'patuju_pos'));
+define('DB_USER',    getenv('PATUJU_DB_USER') ?: ($env['DB_USER'] ?? 'root'));
+define('DB_PASS',    getenv('PATUJU_DB_PASS') ?: ($env['DB_PASS'] ?? ''));
+define('DB_CHARSET', getenv('PATUJU_DB_CHARSET') ?: ($env['DB_CHARSET'] ?? 'utf8mb4'));
 
 /**
  * Obtener conexión PDO

@@ -27,7 +27,8 @@ AddDefaultCharset UTF-8
 
 # ── Proteger directorios sensibles ───────────
 # Bloquear acceso directo a archivos de configuración
-<FilesMatch "\.(sql|md|env|log|bak|ini)$">
+# (incluye variantes .env.* como .env.example o tests/.env.testing)
+<FilesMatch "(\.(sql|md|env|log|bak|ini)|^\.env\..+)$">
     <IfModule mod_authz_core.c>
         Require all denied
     </IfModule>
@@ -42,4 +43,8 @@ AddDefaultCharset UTF-8
     RewriteEngine On
     RewriteRule ^config/ - [F,L]
     RewriteRule ^database/ - [F,L]
+    # Suite de pruebas, dependencias y archivos de tooling (no son públicos)
+    RewriteRule ^(tests|vendor|\.phpunit\.cache)/ - [F,L]
+    RewriteRule ^(composer\.(json|lock)|phpunit\.xml(\.dist)?)$ - [F,L]
+    RewriteRule (^|/)\.env(\.[^/]*)?$ - [F,L]
 </IfModule>

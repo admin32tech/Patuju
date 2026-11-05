@@ -13,6 +13,10 @@ repomix*
 # Directorios de dependencias
 vendor/
 
+# Caché de PHPUnit
+.phpunit.cache/
+.phpunit.result.cache
+
 # Archivos del sistema
 .DS_Store
 Thumbs.db

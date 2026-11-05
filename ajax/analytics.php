@@ -28,7 +28,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     $output = fopen('php://output', 'w');
 
     if ($tipo === 'ventas_sucursal') {
-        fputcsv($output, ['Sucursal', 'Cantidad Ventas', 'Unidades Vendidas', 'Total Facturado (Bs.)'], ';');
+        fputcsv($output, ['Sucursal', 'Cantidad Ventas', 'Unidades Vendidas', 'Total Facturado (Bs.)'], ';', '"', '');
         $stmt = $db->prepare("
             SELECT s.nombre,
                    COUNT(v.id) AS total_transacciones,
@@ -48,10 +48,10 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
                 $row['total_transacciones'],
                 $row['total_unidades'],
                 number_format((float)$row['total_monto'], 2, ',', '.')
-            ], ';');
+            ], ';', '"', '');
         }
     } elseif ($tipo === 'productos') {
-        fputcsv($output, ['Producto', 'Categoría', 'Precio Base (Bs.)', 'Unidades Vendidas', 'Total Recaudado (Bs.)'], ';');
+        fputcsv($output, ['Producto', 'Categoría', 'Precio Base (Bs.)', 'Unidades Vendidas', 'Total Recaudado (Bs.)'], ';', '"', '');
         $stmt = $db->prepare("
             SELECT p.nombre, c.nombre AS categoria, p.precio AS precio_base,
                    COALESCE(SUM(CASE WHEN v.id IS NOT NULL THEN dv.cantidad ELSE 0 END), 0) AS unidades_vendidas,
@@ -73,10 +73,10 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
                 number_format((float)$row['precio_base'], 2, ',', '.'),
                 $row['unidades_vendidas'],
                 number_format((float)$row['total_recaudado'], 2, ',', '.')
-            ], ';');
+            ], ';', '"', '');
         }
     } elseif ($tipo === 'diario') {
-        fputcsv($output, ['Fecha', 'Sucursal', 'Transacciones', 'Unidades', 'Total (Bs.)'], ';');
+        fputcsv($output, ['Fecha', 'Sucursal', 'Transacciones', 'Unidades', 'Total (Bs.)'], ';', '"', '');
         $stmt = $db->prepare("
             SELECT DATE(v.fecha) as fecha, s.nombre as sucursal,
                    COUNT(v.id) as transacciones,
@@ -96,7 +96,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
                 $row['transacciones'],
                 $row['unidades'],
                 number_format((float)$row['total'], 2, ',', '.')
-            ], ';');
+            ], ';', '"', '');
         }
     }
     fclose($output);

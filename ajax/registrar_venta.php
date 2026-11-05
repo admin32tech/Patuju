@@ -64,9 +64,12 @@ try {
         FROM stock_sucursal ss
         JOIN productos p ON p.id = ss.producto_id
         WHERE ss.sucursal_id = ? AND ss.producto_id = ? AND p.activo = 1
+          AND COALESCE(ss.disponible_venta, 1) = 1
         FOR UPDATE
     ");
 
+    // Agrupar líneas repetidas del mismo producto para validar el stock acumulado
+    $itemsAgrupados = [];
     foreach ($items as $item) {
         $prod_id  = (int) ($item['id'] ?? 0);
         $cantidad = (int) ($item['cantidad'] ?? 0);
@@ -75,6 +78,10 @@ try {
             continue;
         }
 
+        $itemsAgrupados[$prod_id] = ($itemsAgrupados[$prod_id] ?? 0) + $cantidad;
+    }
+
+    foreach ($itemsAgrupados as $prod_id => $cantidad) {
         $stmtCheckStock->execute([$sucursal_id, $prod_id]);
         $stock = $stmtCheckStock->fetch();
 
