@@ -1,8 +1,8 @@
 # 📊 Estado Actual del Proyecto: Patujú POS
 
-**Fecha de Estado:** Septiembre 2026  
-**Hoja de Ruta Principal:** [ROADMAP.md](file:///home/vboxuser/Documents/adwn1/adown/patuju1000/docs/ROADMAP.md)  
-**Estado General:** **Fase 1, Fase 2 y Fase 3 Completadas al 100% 🚀** (Listos para iniciar Fase 4: Resiliencia Offline y PWA)
+**Fecha de Estado:** Noviembre 2026 (última revisión: 2026-11-05)  
+**Hoja de Ruta Principal:** [ROADMAP.md](ROADMAP.md)  
+**Estado General:** **Fase 1, Fase 2, Fase 2.5 y Fase 3 Completadas al 100% 🚀** (Listos para iniciar Fase 4: Resiliencia Offline y PWA)
 
 ---
 
@@ -40,6 +40,16 @@ El sistema opera con total independencia por sucursal a través de las 3 vistas 
 - ✅ **Stock Consolidado:** Monitor en tiempo real de inventario en las 15 sucursales.
 - ✅ **Auditoría de Ventas:** Trazabilidad completa de ventas (fecha, hora, cajero, sucursal y detalle).
 - ✅ **Auditoría de Cortes Z:** Historial consolidado de arqueos de caja a nivel nacional.
+- ✅ **Acceso Fluido a 3 Vistas:** Sucursal interna `SUC-000 Administración` (`es_interna = 1`) y auto-recuperación de sesión (`asegurarSucursalAdmin()`), permitiendo al admin alternar bidireccionalmente entre Caja, Encargado y Admin sin contaminar analíticas ni la landing pública.
+
+---
+
+## 🟢 Fase 2.5: Usuarios y Multi-Sucursal para Encargados (Completada)
+
+- ✅ **Gestión de usuarios:** pestaña "Gestión de usuarios" en `admin.php` respaldada por `ajax/usuarios.php` (alta, edición, asignación de sucursales, reseteo de claves y activación).
+- ✅ **Encargados multi-sucursal:** tabla N:M `usuario_sucursales`; la sucursal principal del encargado siempre conserva acceso.
+- ✅ **Permisos granulares:** `puede()` y `obtenerSucursalesAsignadas()` en `config/auth.php`.
+- 📄 **Documentación técnica:** [1user.md](1user.md).
 
 ---
 
@@ -63,12 +73,42 @@ El sistema opera con total independencia por sucursal a través de las 3 vistas 
 
 ---
 
+## 🧪 Sesión de Verificación — 2026-11-04 (Terminal 2 / Antigravity)
+
+**Alcance:** auditoría de los fixes de modales del panel Encargado y del acceso del admin a la caja.
+
+- ✅ **Modales de Encargado:** los 4 modales (`#modal-stock-diario`/horneada, `#modal-lote`, `#modal-movimientos` y `#modal-ajuste`/editar producto) abren y cierran con `classList.add('active')` / `classList.remove('active')`, sin `style.display`. Verificado en `assets/js/encargado.js` y `encargado.php`.
+- ✅ **Acceso del admin a caja:** `asegurarSucursalAdmin()` (`config/auth.php`) recupera y puebla `sucursal_id` (`SUC-000`) en sesiones previas a la migración; se invoca desde `index.php` y `encargado.php`.
+- ✅ **Chequeos estáticos:** `php -l` y `node --check` sin errores (según Terminal 2).
+- ⚠️ **Prueba en navegador pendiente:** MySQL estaba apagado, por lo que no se validó el flujo real.
+- ⚠️ **Botones redundantes:** persisten dos botones "Actualizar" en `encargado.php` que invocan `Encargado.cargarResumenSucursales()` y `Encargado.recargarSucursalActual()`. El ítem 6 de [CORRECCIONES-PENDIENTES.md](CORRECCIONES-PENDIENTES.md) ya pedía retirarlos.
+- 🐛 **Cabecera del panel:** mostraba "(Encargado)" incluso al entrar como admin. Corregida: muestra "(Administrador)" o "(Encargado)" según `$rol`.
+- ➡️ **Siguiente paso:** el usuario solicitó preparar cambios en el frontend.
+
+> **Nota:** el fix de modales (`assets/js/encargado.js`) está en el commit `99c2fa7`; el fix de cabecera de `encargado.php` se integró junto con la Fase 2.5.
+
+---
+
+## 🧪 Sesión de Auditoría de Integración — 2026-11-05
+
+**Alcance:** auditoría de la integración de la Fase 2.5 (usuarios y multi-sucursal) con el resto del sistema. Hallazgos corregidos:
+
+- ✅ **Sesión revalidada en cada petición:** `verificarSesion()`/`verificarSesionAjax()` releen rol, estado `activo` y sucursal desde la BD; un usuario desactivado o eliminado pierde la sesión (AJAX 401, vistas → `login.php`).
+- ✅ **URL manipulada → 403:** `sucursalSolicitadaPermitida()` (`config/auth.php`) valida todo `sucursal_id` que llega del cliente en `stock.php` (GET y POST), `historial.php` y `turno_caja.php`. Para caja y encargado, `0`, `abc`, `-1` o una sucursal que no les corresponde responden 403 en vez de caer en "todas" o en otra sucursal sin avisar; las consultas de todas las sucursales quedan solo para `admin`.
+- ✅ **Historial del día:** caja y encargado solo ven las ventas de hoy (no se acumulan; los filtros de fecha se ignoran). En la vista de caja, el botón Historial muestra al encargado las ventas de hoy de todas las cajas a su cargo; el admin conserva el histórico completo en Auditoría.
+- ✅ **Validaciones de `ajax/usuarios.php`:** sucursal principal obligatoria y no interna para roles distintos de `admin`, la principal del encargado siempre conserva acceso, `reset_password` exige clave explícita y `crear` acepta `activo`.
+- ✅ **Migración:** `actualizar_bd.php` ya no pisa la clave del `admin` (solo la restablece si su hash no es un Bcrypt válido) y siembra `usuario_sucursales` solo cuando la tabla no existía; `database/init_usuarios.php` queda para instalaciones nuevas.
+- ✅ **Suite de pruebas endurecida:** BD aislada `patuju_pos_test` (el nombre debe terminar en `_test`), variables `PATUJU_*` respetadas por la app y la suite. Cómo correrla: ver la sección "Pruebas" del [README](../README.md).
+- ⏳ **Pendiente:** proteger `actualizar_bd.php` con autenticación (rol `admin`) o bloquearlo tras migrar; hoy cualquiera con acceso a la URL puede ejecutarlo.
+
+---
+
 ## 🔴 Fase 4: Resiliencia Offline y PWA (Próxima Fase)
 
 - 📶 **PWA & Service Worker:** Instalación de la aplicación y caché de assets estáticos.
 - 💾 **IndexedDB:** Registro local de ventas sin conexión.
 - 🔄 **Sincronización:** Sync de ventas acumuladas al restablecer conectividad.
-- 📄 **Especificación detallada:** Ver [IT_PWA.md](file:///home/vboxuser/Documents/adwn1/adown/patuju1000/docs/IT_PWA.md).
+- 📄 **Especificación detallada:** Ver [IT_PWA.md](IT_PWA.md).
 
 ---
 
@@ -89,6 +129,8 @@ El directorio `patuju1000/database/` se gestiona bajo el principio de **Única F
 | **`schema.sql`** | Esquema completo unificado y seeders (Fases 1, 2 y 3) con reseteo limpio (`DROP TABLE IF EXISTS`), 15 sucursales, 31 usuarios, inventario inicial sembrado e índices analíticos. | **Instalación o reseteo directo en Laragon / XAMPP / phpMyAdmin.** |
 
 > ℹ️ **Nota de arquitectura:** Como la base de datos se inicializa directamente desde cero en desarrollo/staging, no se utilizan scripts de migración intermedios dispersos. Todo cambio se versiona directamente en `schema.sql`.
+>
+> ⚠️ **BD existentes:** al actualizar el código sobre una BD en uso, ejecuta `actualizar_bd.php` (migración idempotente: crea `usuario_sucursales`, `es_interna`, `SUC-000`, etc.). No uses `database/init_usuarios.php` para migrar: es para instalaciones nuevas y restablece las claves de los usuarios semilla.
 
 ### 🚀 Importación en Laragon / XAMPP / MySQL
 

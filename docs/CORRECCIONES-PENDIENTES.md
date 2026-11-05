@@ -12,6 +12,23 @@
 > - ✅ BUG-08: Documentado el comportamiento de auto-rehash en `schema.sql`
 > - ✅ Confirmados como YA corregidos: BUG-01, BUG-02, BUG-03, BUG-04, BUG-06, BUG-07
 
+> **Resumen de sesión 2026-11-04 (Terminal 2 / Antigravity):**
+> - ✅ Modales de Encargado verificados: los 4 (`horneada`, `lote`, `movimientos`, `editar producto`) usan `classList.add/remove('active')` en `assets/js/encargado.js`.
+> - ✅ Acceso del admin a caja verificado vía `asegurarSucursalAdmin()` (`config/auth.php`), invocado desde `index.php` y `encargado.php`.
+> - ✅ `php -l` y `node --check` sin errores (según Terminal 2).
+> - ⚠️ Sin prueba en navegador: MySQL estaba apagado.
+> - ⚠️ Siguen dos botones "Actualizar" redundantes en `encargado.php` (ver ítem 6).
+> - 🐛 La cabecera de `encargado.php` mostraba "(Encargado)" al admin; corregida para mostrar "(Administrador)" según `$rol`.
+> - ➡️ Siguiente paso: preparar cambios de frontend solicitados por el usuario.
+
+> **Resumen de sesión 2026-11-05 (auditoría de integración, Fase 2.5):**
+> - ✅ Sesión revalidada contra la BD en cada petición (`config/auth.php`): usuario desactivado o eliminado → sesión destruida (AJAX 401, vistas → `login.php`); rol y sucursal se sincronizan sin re-login.
+> - ✅ IDOR en `ajax/stock.php` (GET): roles distintos de `admin` solo consultan sucursales permitidas por `puede('ver_sucursal', id)`; si no, 403. Consultas de todas las sucursales, solo `admin`.
+> - ✅ Validaciones de `ajax/usuarios.php`: sucursal principal obligatoria y no interna para roles distintos de `admin`, sucursales internas rechazadas en `asignar_sucursales`, la principal del encargado siempre conserva acceso, `reset_password` sin clave por defecto.
+> - ✅ `actualizar_bd.php` ya no pisa la clave del `admin` (solo si su hash no es Bcrypt válido) y siembra `usuario_sucursales` solo si la tabla no existía.
+> - ✅ Suite PHPUnit endurecida: BD aislada `patuju_pos_test` (nombre terminado en `_test`) y variables `PATUJU_*`.
+> - ⏳ Pendiente: proteger `actualizar_bd.php` con autenticación o bloquearlo tras migrar.
+
 ---
 
 ## 🔴 CRÍTICO — Bloquea Funcionamiento
@@ -253,6 +270,8 @@ VALUES (?, ?, ?, NOW(), 'abierto')
 - **Eliminar:** Botón "Refrescar" de la vista Encargado (no hace nada útil).
 - **Reemplazar:** Con un único botón **"Actualizar Datos"** en Admin (si es necesario) con spinner visual.
 - **Documentar:** Qué hace cada botón en un tooltip (hover).
+
+> **Hallazgo 2026-11-04 (Terminal 2):** persisten dos botones "Actualizar" en `encargado.php` (cabecera del resumen y vista de detalle) que invocan `Encargado.cargarResumenSucursales()` y `Encargado.recargarSucursalActual()`. Ambas funciones existen y están exportadas; el pendiente es decidir si se retiran los botones o se justifica su utilidad.
 
 ---
 
