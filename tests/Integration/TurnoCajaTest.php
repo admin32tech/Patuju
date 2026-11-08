@@ -295,6 +295,39 @@ final class TurnoCajaTest extends TestCase
     }
 
     /**
+     * La auditoría de turnos del encargado se recorta a 30 días; el admin conserva el histórico.
+     */
+    public function testEncargadoAuditoriaIsLimitedToThirtyDays(): void
+    {
+        $this->loginAs('caja_caja_central');
+        $this->openShift('caja_caja_central');
+        $reciente = (int) $this->scalar('SELECT MAX(id) FROM turnos_caja');
+
+        $this->loginAs('caja_caja_lujan');
+        $this->openShift('caja_caja_lujan');
+        $antiguo = (int) $this->scalar('SELECT MAX(id) FROM turnos_caja');
+        $this->db()->prepare('UPDATE turnos_caja SET hora_apertura = hora_apertura - INTERVAL 45 DAY WHERE id = ?')->execute([$antiguo]);
+
+        $idsDe = function (string $user, string $query): array {
+            $this->loginAs($user);
+            $response = $this->get('/ajax/turno_caja.php?auditoria=1' . $query, $user);
+            $this->assertSame(200, $response->status, $response->body);
+            $ids = array_map(static fn (array $t): int => (int) $t['id'], $response->json()['turnos']);
+            sort($ids);
+            return $ids;
+        };
+
+        $enc = 'encargado_encargado_central';
+        $this->assertSame([$reciente], $idsDe($enc, ''));
+        $this->assertSame([$reciente], $idsDe($enc, '&fecha_desde=2000-01-01&fecha_hasta=2099-12-31'));
+        $this->assertSame([$reciente], $idsDe($enc, '&estado=abierto'));
+        // Un estado inválido se ignora y no rompe la consulta
+        $this->assertSame([$reciente], $idsDe($enc, '&estado=x%27%20OR%201=1'));
+
+        $this->assertSame([$reciente, $antiguo], $idsDe('admin', '&fecha_desde=2000-01-01'));
+    }
+
+    /**
      * Caja y encargado solo consultan su propio turno activo: pedir otro → 403.
      */
     public function testCajaCannotQueryAnotherShift(): void

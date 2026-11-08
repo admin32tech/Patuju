@@ -5,10 +5,12 @@
  * GET        → Lista de ventas con auditoría y trazabilidad
  * GET ?hoy=1 → Total acumulado del día
  * Parámetros opcionales: ?sucursal_id=X & ?usuario_id=W & ?limit=50 (máx. 200)
- * Solo admin: ?fecha_desde=Y & ?fecha_hasta=Z & ?solo_hoy=1
+ * Admin: ?fecha_desde=Y & ?fecha_hasta=Z & ?solo_hoy=1 (rango libre)
+ * Encargado: ?fecha_desde=Y & ?fecha_hasta=Z (auditoría de últimos 30 días)
  *
- * Caja y encargado solo ven las ventas del día actual de sus sucursales
- * (caja: la suya; encargado: todas las asignadas). Un sucursal_id manipulado
+ * Caja solo ve las ventas del día actual de su sucursal. Encargado, sin fechas,
+ * ve el día actual de sus sucursales (historial de caja); con fechas, audita
+ * esas mismas sucursales dentro de los últimos 30 días. Un sucursal_id manipulado
  * (0, 'abc' o una sucursal ajena) responde 403.
  */
 require_once __DIR__ . '/../config/auth.php';
@@ -81,18 +83,35 @@ try {
         $params[] = (int) $_GET['usuario_id'];
     }
 
-    // Filtros por fecha: caja y encargado solo ven el día actual (no se acumula);
-    // el admin consulta cualquier rango en Auditoría o pide ?solo_hoy=1.
-    if ($rol !== 'admin' || !empty($_GET['solo_hoy'])) {
+    // Filtros por fecha:
+    // - Admin: rango libre; ?solo_hoy=1 limita al día actual.
+    // - Encargado: sin fechas ve el día actual (historial de caja); con fechas,
+    //   auditoría acotada a sus sucursales y a los últimos 30 días.
+    // - Caja: siempre y solo el día actual.
+    $fechaDesde = fechaValida($_GET['fecha_desde'] ?? null);
+    $fechaHasta = fechaValida($_GET['fecha_hasta'] ?? null);
+
+    if ($rol === 'admin') {
+        if (!empty($_GET['solo_hoy'])) {
+            $where[] = "DATE(v.fecha) = CURDATE()";
+            $fechaDesde = null;
+            $fechaHasta = null;
+        }
+    } elseif ($rol === 'encargado' && puede('ver_auditoria_sucursal') && ($fechaDesde !== null || $fechaHasta !== null)) {
+        [$fechaDesde, $fechaHasta] = rangoAuditoriaEncargado($fechaDesde, $fechaHasta);
+    } else {
         $where[] = "DATE(v.fecha) = CURDATE()";
+        $fechaDesde = null;
+        $fechaHasta = null;
     }
-    if ($rol === 'admin' && !empty($_GET['fecha_desde'])) {
+
+    if ($fechaDesde !== null) {
         $where[] = "DATE(v.fecha) >= ?";
-        $params[] = $_GET['fecha_desde'];
+        $params[] = $fechaDesde;
     }
-    if ($rol === 'admin' && !empty($_GET['fecha_hasta'])) {
+    if ($fechaHasta !== null) {
         $where[] = "DATE(v.fecha) <= ?";
-        $params[] = $_GET['fecha_hasta'];
+        $params[] = $fechaHasta;
     }
 
     $limit = isset($_GET['limit']) ? max(1, min((int) $_GET['limit'], 200)) : 50;

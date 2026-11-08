@@ -239,26 +239,58 @@ final class HistorialTest extends TestCase
     }
 
     /**
-     * El encargado ve las ventas de hoy de todas sus cajas, nunca las de días anteriores
-     * ni las de cajas que no tiene a cargo.
+     * Sin fechas, el encargado ve el día actual de todas sus cajas (historial de caja):
+     * ni días anteriores ni cajas que no tiene a cargo.
      */
-    public function testEncargadoOnlySeesTodaysSalesOfAssignedBranches(): void
+    public function testEncargadoWithoutDatesSeesOnlyTodayOfAssignedBranches(): void
     {
         $deAyer = $this->createSale('caja_caja_central', 1, 1, 10);
         $hoySuc1 = $this->createSale('caja_caja_central', 2, 1, 10);
         $hoySuc2 = $this->createSale('caja_caja_lujan', 1, 1, 10);
         $this->createSale('caja_caja_1plan3000', 1, 1, 10); // sucursal 6, no asignada
         $this->moveSaleToYesterday($deAyer);
-        $ayer = (string) $this->scalar('SELECT CURDATE() - INTERVAL 1 DAY');
 
-        $this->loginAs('encargado_encargado_central');
-        foreach (['', "?fecha_desde={$ayer}&fecha_hasta={$ayer}"] as $query) {
-            $response = $this->get('/ajax/historial.php' . $query, 'encargado_encargado_central');
-            $this->assertSame(200, $response->status, $response->body);
-            $ids = array_map(static fn (array $v): int => (int) $v['id'], $response->json()['data']);
-            sort($ids);
-            $this->assertSame([$hoySuc1, $hoySuc2], $ids, $query);
-        }
+        $this->assertSame([$hoySuc1, $hoySuc2], $this->idsDeVentas('encargado_encargado_central', ''));
+    }
+
+    /**
+     * Auditoría del encargado: con fechas ve los últimos 30 días, pero solo de sus sucursales.
+     */
+    public function testEncargadoAuditsOwnBranchesWithinThirtyDays(): void
+    {
+        $deAyer = $this->createSale('caja_caja_central', 1, 1, 10);
+        $hoySuc2 = $this->createSale('caja_caja_lujan', 1, 1, 10);
+        $ajena = $this->createSale('caja_caja_1plan3000', 1, 1, 10); // sucursal 6, no asignada
+        $this->moveSaleToYesterday($deAyer);
+        $ayer = (string) $this->scalar('SELECT CURDATE() - INTERVAL 1 DAY');
+        $hoy = (string) $this->scalar('SELECT CURDATE()');
+
+        $this->assertSame([$deAyer], $this->idsDeVentas('encargado_encargado_central', "?fecha_desde={$ayer}&fecha_hasta={$ayer}"));
+        $ids = $this->idsDeVentas('encargado_encargado_central', "?fecha_desde={$ayer}&fecha_hasta={$hoy}");
+        $this->assertSame([$deAyer, $hoySuc2], $ids);
+        $this->assertNotContains($ajena, $ids);
+
+        // Filtrar por una sucursal ajena sigue siendo 403 aunque haya fechas
+        $response = $this->get("/ajax/historial.php?sucursal_id=6&fecha_desde={$ayer}&fecha_hasta={$hoy}", 'encargado_encargado_central');
+        $this->assertSame(403, $response->status);
+    }
+
+    /**
+     * El rango del encargado se recorta a 30 días aunque la URL pida más; el admin conserva el histórico.
+     */
+    public function testEncargadoCannotAuditBeyondThirtyDays(): void
+    {
+        $antigua = $this->createSale('caja_caja_central', 1, 1, 10);
+        $reciente = $this->createSale('caja_caja_central', 2, 1, 10);
+        $this->db()->prepare('UPDATE ventas SET fecha = fecha - INTERVAL 45 DAY WHERE id = ?')->execute([$antigua]);
+        $hoy = (string) $this->scalar('SELECT CURDATE()');
+
+        $this->assertSame([$reciente], $this->idsDeVentas('encargado_encargado_central', "?fecha_desde=2000-01-01&fecha_hasta={$hoy}"));
+        // Fechas futuras o inválidas no amplían nada
+        $this->assertSame([$reciente], $this->idsDeVentas('encargado_encargado_central', '?fecha_desde=2000-01-01&fecha_hasta=2099-12-31'));
+        $this->assertSame([$reciente], $this->idsDeVentas('encargado_encargado_central', '?fecha_desde=basura'));
+
+        $this->assertSame([$antigua, $reciente], $this->idsDeVentas('admin', '?fecha_desde=2000-01-01'));
     }
 
     /**
@@ -320,6 +352,17 @@ final class HistorialTest extends TestCase
         $response = $this->get('/ajax/historial.php', 'admin');
 
         $this->assertCount(2, $response->json()['data']);
+    }
+
+    /** @return int[] ids de ventas devueltos por historial.php, ordenados */
+    private function idsDeVentas(string $user, string $query): array
+    {
+        $this->loginAs($user);
+        $response = $this->get('/ajax/historial.php' . $query, $user);
+        $this->assertSame(200, $response->status, $response->body);
+        $ids = array_map(static fn (array $v): int => (int) $v['id'], $response->json()['data']);
+        sort($ids);
+        return $ids;
     }
 
     private function moveSaleToYesterday(int $ventaId): void

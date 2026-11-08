@@ -247,6 +247,12 @@ function puede(string $accion, ...$args): bool {
         case 'exportar_reportes':
             return false; // Exclusivo de admin
 
+        case 'ver_auditoria_sucursal':
+            // Auditoría acotada: el encargado solo puede revisar las sucursales
+            // que tiene asignadas. El filtro real lo aplica cada endpoint con
+            // obtenerSucursalesAsignadas().
+            return $rol === 'encargado';
+
         case 'ver_sucursal':
         case 'editar_stock':
         case 'ingreso_lote':
@@ -286,4 +292,57 @@ function sucursalSolicitadaPermitida($valor, string $accion = 'ver_sucursal'): ?
         jsonResponse(['success' => false, 'error' => 'No tienes permisos sobre esta sucursal'], 403);
     }
     return (int) $texto;
+}
+
+/**
+ * Valida una fecha YYYY-MM-DD y la devuelve normalizada.
+ * Devuelve null si no es una fecha real (p. ej. 2026-02-31).
+ */
+function fechaValida($valor): ?string {
+    if (!is_string($valor) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $valor)) {
+        return null;
+    }
+    $fecha = DateTimeImmutable::createFromFormat('!Y-m-d', $valor);
+    return ($fecha !== false && $fecha->format('Y-m-d') === $valor) ? $valor : null;
+}
+
+/**
+ * Recorta el rango de auditoría de un encargado a la ventana permitida:
+ * hoy y los ($dias - 1) días anteriores. Si no se pidió ningún extremo,
+ * devuelve [null, null] para que el endpoint aplique su valor por defecto.
+ * Un rango más amplio, en el futuro o fuera de la ventana nunca se respeta:
+ * la URL manipulada no amplía lo que el encargado puede auditar.
+ *
+ * @return array{0:?string,1:?string}
+ */
+function rangoAuditoriaEncargado($desde, $hasta, int $dias = 30): array {
+    $desde = fechaValida($desde);
+    $hasta = fechaValida($hasta);
+    if ($desde === null && $hasta === null) {
+        return [null, null];
+    }
+
+    $hoy    = new DateTimeImmutable('today');
+    $minimo = $hoy->modify('-' . ($dias - 1) . ' days');
+
+    $fin = $hasta !== null ? new DateTimeImmutable($hasta) : $hoy;
+    if ($fin > $hoy) {
+        $fin = $hoy;
+    }
+    if ($fin < $minimo) {
+        $fin = $minimo;
+    }
+
+    $inicio = $desde !== null ? new DateTimeImmutable($desde) : $fin->modify('-' . ($dias - 1) . ' days');
+    if ($inicio < $minimo) {
+        $inicio = $minimo;
+    }
+    if ($inicio > $fin) {
+        $inicio = $fin;
+    }
+    if ((int) $inicio->diff($fin)->days > $dias - 1) {
+        $inicio = $fin->modify('-' . ($dias - 1) . ' days');
+    }
+
+    return [$inicio->format('Y-m-d'), $fin->format('Y-m-d')];
 }

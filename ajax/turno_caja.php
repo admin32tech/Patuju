@@ -22,8 +22,10 @@ $rol        = $_SESSION['usuario_rol'];
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     // ── Auditoría de turnos cerrados (Cortes Z) ───────────────────────────
+    // Admin: todas las sucursales y rango libre. Encargado: solo sus sucursales
+    // asignadas y, como máximo, los últimos 30 días.
     if (isset($_GET['auditoria'])) {
-        if ($rol !== 'admin' && $rol !== 'encargado') {
+        if (!puede('ver_auditoria_sucursal')) {
             jsonResponse(['success' => false, 'error' => 'Sin permisos para ver auditoría de turnos'], 403);
         }
 
@@ -53,18 +55,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             }
         }
 
-        if (!empty($_GET['estado'])) {
+        if (!empty($_GET['estado']) && in_array($_GET['estado'], ['abierto', 'cerrado'], true)) {
             $where[] = "t.estado = ?";
             $params[] = $_GET['estado'];
         }
 
-        if (!empty($_GET['fecha_desde'])) {
-            $where[] = "DATE(t.hora_apertura) >= ?";
-            $params[] = $_GET['fecha_desde'];
+        $fechaDesde = fechaValida($_GET['fecha_desde'] ?? null);
+        $fechaHasta = fechaValida($_GET['fecha_hasta'] ?? null);
+
+        if ($rol === 'admin') {
+            // El admin conserva el histórico completo y el rango libre.
+        } else {
+            // El encargado nunca audita fuera de los últimos 30 días; sin fechas,
+            // la vista muestra por defecto esa misma ventana.
+            [$fechaDesde, $fechaHasta] = rangoAuditoriaEncargado($fechaDesde, $fechaHasta);
+            if ($fechaDesde === null) {
+                $hoy        = new DateTimeImmutable('today');
+                $fechaDesde = $hoy->modify('-29 days')->format('Y-m-d');
+                $fechaHasta = $hoy->format('Y-m-d');
+            }
         }
-        if (!empty($_GET['fecha_hasta'])) {
+
+        if ($fechaDesde !== null) {
+            $where[] = "DATE(t.hora_apertura) >= ?";
+            $params[] = $fechaDesde;
+        }
+        if ($fechaHasta !== null) {
             $where[] = "DATE(t.hora_apertura) <= ?";
-            $params[] = $_GET['fecha_hasta'];
+            $params[] = $fechaHasta;
         }
 
         $whereSql = implode(" AND ", $where);
@@ -99,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     // Base del cierre supervisado: el encargado ve el Corte X de cada turno abierto
     // de sus sucursales (p. ej. un cajero que no cerró o que fue reasignado).
     if (isset($_GET['abiertos'])) {
-        if ($rol !== 'admin' && $rol !== 'encargado') {
+        if (!puede('ver_auditoria_sucursal')) {
             jsonResponse(['success' => false, 'error' => 'Sin permisos para gestionar turnos'], 403);
         }
 
