@@ -23,6 +23,10 @@ const Encargado = (() => {
     let modoVistaActual = 'cards'; // 'cards' o 'tabla'
     let tabModalActivo = 'precio';  // 'precio', 'ingreso', 'historial'
     let filtroRotacionActual = 'todos'; // 'todos', 'diaria', 'lenta'
+    let vistaActual = 'sucursales'; // 'sucursales' o 'auditoria'
+    let tabAuditoriaActual = 'ventas'; // 'ventas' o 'turnos'
+    let detalleSucursalAbierto = false;
+    let auditoriaInicializada = false;
 
     // Helper selector
     const $ = (sel) => document.querySelector(sel);
@@ -58,6 +62,308 @@ const Encargado = (() => {
         };
         actualizar();
         setInterval(actualizar, 1000);
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // NAVEGACIÓN PRINCIPAL: SUCURSALES / AUDITORÍA
+    // ══════════════════════════════════════════════════════════════════
+
+    function marcarTabActivo(btn, activo) {
+        if (!btn) return;
+        btn.classList.toggle('active', activo);
+    }
+
+    function cambiarVista(vista) {
+        vistaActual = vista === 'auditoria' ? 'auditoria' : 'sucursales';
+
+        const vSuc = $('#vista-sucursales');
+        const vDet = $('#vista-detalle-sucursal');
+        const vAud = $('#vista-auditoria');
+        const btnSuc = $('#btn-vista-sucursales');
+        const btnAud = $('#btn-vista-auditoria');
+
+        if (vistaActual === 'auditoria') {
+            if (vSuc) vSuc.style.display = 'none';
+            if (vDet) vDet.style.display = 'none';
+            if (vAud) vAud.style.display = 'block';
+            if ($('#topbar-subtitulo')) $('#topbar-subtitulo').textContent = 'Auditoría';
+            marcarTabActivo(btnSuc, false);
+            marcarTabActivo(btnAud, true);
+
+            if (!auditoriaInicializada) {
+                auditoriaInicializada = true;
+                cargarAuditoriaVentas();
+            }
+            if (tabAuditoriaActual === 'turnos') {
+                cargarCajasAbiertas();
+                cargarAuditoriaTurnos();
+            }
+        } else {
+            if (vAud) vAud.style.display = 'none';
+            if (detalleSucursalAbierto && sucursalSeleccionadaId) {
+                if (vSuc) vSuc.style.display = 'none';
+                if (vDet) vDet.style.display = 'block';
+                if ($('#topbar-subtitulo')) $('#topbar-subtitulo').textContent = sucursalSeleccionadaNombre;
+            } else {
+                if (vSuc) vSuc.style.display = 'block';
+                if (vDet) vDet.style.display = 'none';
+                if ($('#topbar-subtitulo')) $('#topbar-subtitulo').textContent = document.body.dataset.sucursalNombre || 'Mi Sucursal';
+            }
+            marcarTabActivo(btnSuc, true);
+            marcarTabActivo(btnAud, false);
+        }
+
+        window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    }
+
+    function cambiarTabAuditoria(tab) {
+        tabAuditoriaActual = tab === 'turnos' ? 'turnos' : 'ventas';
+        const esVentas = tabAuditoriaActual === 'ventas';
+
+        const panelVentas = $('#panel-aud-ventas');
+        const panelTurnos = $('#panel-aud-turnos');
+        if (panelVentas) panelVentas.style.display = esVentas ? 'block' : 'none';
+        if (panelTurnos) panelTurnos.style.display = esVentas ? 'none' : 'block';
+
+        marcarTabActivo($('#tab-aud-ventas'), esVentas);
+        marcarTabActivo($('#tab-aud-turnos'), !esVentas);
+
+        if (esVentas) {
+            cargarAuditoriaVentas();
+        } else {
+            cargarCajasAbiertas();
+            cargarAuditoriaTurnos();
+        }
+    }
+
+    function refrescarAuditoriaSiVisible() {
+        if (vistaActual !== 'auditoria') return;
+        if (tabAuditoriaActual === 'ventas') {
+            cargarAuditoriaVentas();
+        } else {
+            cargarCajasAbiertas();
+            cargarAuditoriaTurnos();
+        }
+    }
+
+    function recargarAuditoria() {
+        refrescarAuditoriaSiVisible();
+    }
+
+    // ── Auditoría: helpers ──────────────────────────────────────────
+    const bsAud = (n) => 'Bs. ' + Number(n || 0).toFixed(2);
+
+    function filaMensajeAud(tbody, cols, texto, esError) {
+        tbody.innerHTML = `<tr><td colspan="${cols}" class="admin-empty-row"${esError ? ' style="color: var(--color-danger);"' : ''}>${escapeHtml(texto)}</td></tr>`;
+    }
+
+    // Mismo rango que valida el servidor (máx. 30 días); evita pedir algo que se recortaría
+    function rangoAuditoriaValido(idDesde, idHasta) {
+        const desde = $(idDesde)?.value || '';
+        const hasta = $(idHasta)?.value || '';
+        if (desde && hasta && desde > hasta) {
+            mostrarNotificacion('La fecha "Desde" no puede ser posterior a "Hasta"', 'error');
+            return null;
+        }
+        return { desde, hasta };
+    }
+
+    // ── Auditoría: ventas de mis sucursales ─────────────────────────
+    async function cargarAuditoriaVentas() {
+        const tbody = $('#aud-ventas-tbody');
+        if (!tbody) return;
+        const rango = rangoAuditoriaValido('#aud-venta-desde', '#aud-venta-hasta');
+        if (!rango) return;
+
+        filaMensajeAud(tbody, 7, 'Cargando ventas...');
+        const params = new URLSearchParams({ limit: '200' });
+        const sucId = $('#aud-venta-sucursal')?.value || '';
+        if (sucId) params.append('sucursal_id', sucId);
+        // Sin fechas el servidor devolvería solo hoy; se envían siempre
+        if (rango.desde) params.append('fecha_desde', rango.desde);
+        if (rango.hasta) params.append('fecha_hasta', rango.hasta);
+
+        try {
+            const res = await fetch(`ajax/historial.php?${params.toString()}`);
+            const data = await res.json();
+            if (!data.success) {
+                filaMensajeAud(tbody, 7, data.error || 'No se pudo cargar la auditoría', true);
+                return;
+            }
+            renderAuditoriaVentas(data.data || []);
+        } catch (err) {
+            filaMensajeAud(tbody, 7, 'Error de conexión', true);
+        }
+    }
+
+    function renderAuditoriaVentas(ventas) {
+        const tbody = $('#aud-ventas-tbody');
+        const resumen = $('#aud-ventas-resumen');
+        if (!tbody) return;
+
+        const total = ventas.reduce((acc, v) => acc + (Number(v.total_raw) || 0), 0);
+        if (resumen) {
+            resumen.textContent = ventas.length
+                ? `${ventas.length} venta(s) · Total ${bsAud(total)}` + (ventas.length >= 200 ? ' · se muestran las 200 más recientes: acota el rango para ver el resto' : '')
+                : '';
+        }
+        if (ventas.length === 0) {
+            filaMensajeAud(tbody, 7, 'No hay ventas en tus sucursales para este rango');
+            return;
+        }
+
+        const badges = {
+            efectivo: '<span class="badge" style="background:var(--color-success-bg);color:var(--color-success);">Efectivo</span>',
+            qr: '<span class="badge" style="background:rgba(96,165,250,0.15);color:var(--color-info);">QR</span>'
+        };
+        const tarjeta = '<span class="badge" style="background:rgba(240,160,48,0.15);color:var(--color-primary-ink);">Tarjeta</span>';
+
+        tbody.innerHTML = ventas.map(v => {
+            const detalle = (v.detalle || []).map(d => `${escapeHtml(d.cantidad)}x ${escapeHtml(d.producto_nombre)} (${bsAud(d.subtotal)})`).join(', ')
+                || `${escapeHtml(v.items_count)} items`;
+            return `
+                <tr>
+                    <td><strong>#${escapeHtml(v.id)}</strong></td>
+                    <td style="font-size: 0.85rem; color: var(--color-text-muted);">${escapeHtml(v.fecha)}</td>
+                    <td><strong>${escapeHtml(v.sucursal_nombre)}</strong></td>
+                    <td>${escapeHtml(v.cajero_nombre)}</td>
+                    <td style="font-size: 0.85rem; max-width: 320px;">${detalle}</td>
+                    <td>${badges[v.metodo_pago] || tarjeta}</td>
+                    <td class="col-right" style="font-weight: 700; color: var(--color-primary-ink);">Bs. ${escapeHtml(v.total)}</td>
+                </tr>`;
+        }).join('');
+    }
+
+    // ── Auditoría: cajas abiertas ahora ─────────────────────────────
+    async function cargarCajasAbiertas() {
+        const tbody = $('#aud-cajas-abiertas-tbody');
+        if (!tbody) return;
+        filaMensajeAud(tbody, 7, 'Cargando cajas abiertas...');
+
+        const params = new URLSearchParams({ abiertos: '1' });
+        const sucId = $('#aud-turno-sucursal')?.value || '';
+        if (sucId) params.append('sucursal_id', sucId);
+
+        try {
+            const res = await fetch(`ajax/turno_caja.php?${params.toString()}`);
+            const data = await res.json();
+            if (!data.success) {
+                filaMensajeAud(tbody, 7, data.error || 'No se pudieron cargar las cajas', true);
+                return;
+            }
+            renderCajasAbiertas(data.turnos || []);
+        } catch (err) {
+            filaMensajeAud(tbody, 7, 'Error de conexión', true);
+        }
+    }
+
+    function renderCajasAbiertas(turnos) {
+        const tbody = $('#aud-cajas-abiertas-tbody');
+        const resumen = $('#aud-cajas-resumen');
+        if (!tbody) return;
+        if (resumen) resumen.textContent = turnos.length ? `${turnos.length} caja(s) con turno abierto` : '';
+        if (turnos.length === 0) {
+            filaMensajeAud(tbody, 7, 'No hay cajas abiertas en tus sucursales');
+            return;
+        }
+
+        tbody.innerHTML = turnos.map(t => `
+            <tr>
+                <td><strong>${escapeHtml(t.sucursal_nombre)}</strong></td>
+                <td>${escapeHtml(t.cajero_nombre)}</td>
+                <td style="font-size: 0.85rem; color: var(--color-text-muted);">${escapeHtml(t.hora_apertura)}</td>
+                <td class="col-right">${bsAud(t.ventas_sistema)} <small style="color: var(--color-text-muted);">(${parseInt(t.num_ventas, 10) || 0})</small></td>
+                <td class="col-right">${bsAud(t.egresos_menores)}</td>
+                <td class="col-right" style="font-weight: 700; color: var(--color-success);">${bsAud(t.efectivo_esperado)}</td>
+                <td class="col-center">
+                    <button type="button" class="btn" data-aud-cerrar="${escapeHtml(t.sucursal_id)}" style="font-size: 0.8rem; font-weight: 700; color: var(--color-danger); border-color: var(--color-danger);">Cerrar turno</button>
+                </td>
+            </tr>`).join('');
+
+        tbody.onclick = (e) => {
+            const btn = e.target.closest('[data-aud-cerrar]');
+            if (btn) abrirModalCerrarTurno(btn.dataset.audCerrar);
+        };
+    }
+
+    // ── Auditoría: cortes Z ─────────────────────────────────────────
+    function filtrarAuditoriaTurnos() {
+        cargarCajasAbiertas();
+        cargarAuditoriaTurnos();
+    }
+
+    async function cargarAuditoriaTurnos() {
+        const tbody = $('#aud-turnos-tbody');
+        if (!tbody) return;
+        const rango = rangoAuditoriaValido('#aud-turno-desde', '#aud-turno-hasta');
+        if (!rango) return;
+
+        filaMensajeAud(tbody, 9, 'Cargando cortes Z...');
+        const params = new URLSearchParams({ auditoria: '1' });
+        const sucId = $('#aud-turno-sucursal')?.value || '';
+        const estado = $('#aud-turno-estado')?.value || '';
+        if (sucId) params.append('sucursal_id', sucId);
+        if (estado) params.append('estado', estado);
+        if (rango.desde) params.append('fecha_desde', rango.desde);
+        if (rango.hasta) params.append('fecha_hasta', rango.hasta);
+
+        try {
+            const res = await fetch(`ajax/turno_caja.php?${params.toString()}`);
+            const data = await res.json();
+            if (!data.success) {
+                filaMensajeAud(tbody, 9, data.error || 'No se pudo cargar la auditoría de turnos', true);
+                return;
+            }
+            renderAuditoriaTurnos(data.turnos || []);
+        } catch (err) {
+            filaMensajeAud(tbody, 9, 'Error de conexión', true);
+        }
+    }
+
+    function renderAuditoriaTurnos(turnos) {
+        const tbody = $('#aud-turnos-tbody');
+        const resumen = $('#aud-turnos-resumen');
+        if (!tbody) return;
+
+        const conDiferencia = turnos.filter(t => t.estado === 'cerrado' && Number(t.diferencia) !== 0).length;
+        if (resumen) {
+            resumen.textContent = turnos.length
+                ? `${turnos.length} turno(s) · ${conDiferencia} con diferencia` + (turnos.length >= 100 ? ' · se muestran los 100 más recientes' : '')
+                : '';
+        }
+        if (turnos.length === 0) {
+            filaMensajeAud(tbody, 9, 'No hay turnos en tus sucursales para este rango');
+            return;
+        }
+
+        tbody.innerHTML = turnos.map(t => {
+            const cerrado = t.estado === 'cerrado';
+            const dif = t.diferencia !== null ? Number(t.diferencia) : null;
+            let badge;
+            if (!cerrado) {
+                badge = '<span class="badge" style="background:rgba(96,165,250,0.15);color:var(--color-info);">Abierto</span>';
+            } else if (dif === 0) {
+                badge = '<span class="badge" style="background:var(--color-success-bg);color:var(--color-success);">Cuadrado</span>';
+            } else if (dif > 0) {
+                badge = `<span class="badge" style="background:rgba(52,211,153,0.15);color:var(--color-success);">Sobrante +${dif.toFixed(2)}</span>`;
+            } else {
+                badge = `<span class="badge" style="background:var(--color-danger-bg);color:var(--color-danger);">Faltante ${dif.toFixed(2)}</span>`;
+            }
+            return `
+                <tr>
+                    <td><strong>#${escapeHtml(t.id)}</strong></td>
+                    <td><strong>${escapeHtml(t.sucursal_nombre)}</strong><br><small style="color: var(--color-text-muted);">${escapeHtml(t.cajero_nombre)}</small></td>
+                    <td style="font-size: 0.8rem; color: var(--color-text-muted);">
+                        ${escapeHtml(t.hora_apertura)}<br>${t.hora_cierre ? escapeHtml(t.hora_cierre) : '<em>En curso</em>'}
+                    </td>
+                    <td class="col-right">${bsAud(t.monto_apertura)}</td>
+                    <td class="col-right">${t.ventas_sistema !== null ? bsAud(t.ventas_sistema) : '—'}</td>
+                    <td class="col-right">${bsAud(t.egresos_menores)}</td>
+                    <td class="col-right">${t.monto_cierre !== null ? bsAud(t.monto_cierre) : '—'}</td>
+                    <td class="col-center">${badge}</td>
+                    <td style="font-size: 0.8rem; max-width: 220px;">${escapeHtml(t.notas || '')}</td>
+                </tr>`;
+        }).join('');
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -332,6 +638,7 @@ const Encargado = (() => {
             const detalle = dif === 0 ? 'cuadrado' : (dif > 0 ? `sobrante Bs. ${dif.toFixed(2)}` : `faltante Bs. ${Math.abs(dif).toFixed(2)}`);
             mostrarNotificacion(`Turno cerrado (${detalle})`, 'success');
             cargarResumenSucursales();
+            refrescarAuditoriaSiVisible();
             abrirModalCerrarTurno(sucursalCierreId);
         } catch (err) {
             mostrarNotificacion('Error de conexión', 'error');
@@ -368,12 +675,18 @@ const Encargado = (() => {
     function seleccionarSucursal(id, nombre, turnoEstado) {
         sucursalSeleccionadaId = id;
         sucursalSeleccionadaNombre = nombre;
+        detalleSucursalAbierto = true;
 
-        // Ocultar vista 1 y mostrar vista 2
+        // Ocultar vista 1 y auditoría, mostrar vista 2
         const vSucursales = $('#vista-sucursales');
         const vDetalle = $('#vista-detalle-sucursal');
+        const vAuditoria = $('#vista-auditoria');
         if (vSucursales) vSucursales.style.display = 'none';
+        if (vAuditoria) vAuditoria.style.display = 'none';
         if (vDetalle) vDetalle.style.display = 'block';
+        vistaActual = 'sucursales';
+        marcarTabActivo($('#btn-vista-sucursales'), true);
+        marcarTabActivo($('#btn-vista-auditoria'), false);
 
         // Actualizar datos de cabecera
         if ($('#detalle-sucursal-titulo')) $('#detalle-sucursal-titulo').textContent = nombre;
@@ -401,10 +714,17 @@ const Encargado = (() => {
     }
 
     function volverASucursales() {
+        detalleSucursalAbierto = false;
+        vistaActual = 'sucursales';
         const vSucursales = $('#vista-sucursales');
         const vDetalle = $('#vista-detalle-sucursal');
+        const vAuditoria = $('#vista-auditoria');
         if (vDetalle) vDetalle.style.display = 'none';
+        if (vAuditoria) vAuditoria.style.display = 'none';
         if (vSucursales) vSucursales.style.display = 'block';
+        if ($('#topbar-subtitulo')) $('#topbar-subtitulo').textContent = document.body.dataset.sucursalNombre || 'Mi Sucursal';
+        marcarTabActivo($('#btn-vista-sucursales'), true);
+        marcarTabActivo($('#btn-vista-auditoria'), false);
 
         cargarResumenSucursales();
         window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
@@ -1316,6 +1636,11 @@ const Encargado = (() => {
         abrirModalMovimientos,
         cerrarModalMovimientos,
         abrirModalCerrarTurno,
-        cerrarModalCerrarTurno
+        cerrarModalCerrarTurno,
+        cambiarVista,
+        cambiarTabAuditoria,
+        recargarAuditoria,
+        cargarAuditoriaVentas,
+        filtrarAuditoriaTurnos
     };
 })();

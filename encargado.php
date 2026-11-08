@@ -7,6 +7,34 @@ $sucursalNombre = $sucursal ? $sucursal['nombre'] : ($_SESSION['sucursal_nombre'
 $sucursalId = (int) ($_SESSION['sucursal_id'] ?? 0);
 $usuarioNombre = $_SESSION['usuario_nombre'] ?? 'Encargado';
 $rol = $_SESSION['usuario_rol'] ?? 'encargado';
+
+// Sucursales visibles en los filtros de auditoría: el admin ve todas las
+// sedes reales; el encargado, solo las que tiene asignadas.
+$db = getDB();
+$idsAsignadas = $rol === 'admin' ? [] : obtenerSucursalesAsignadas();
+if ($rol === 'admin') {
+    $sucursalesAuditoria = $db->query(
+        "SELECT id, nombre FROM sucursales WHERE activo = 1 AND es_interna = 0 ORDER BY nombre ASC"
+    )->fetchAll();
+} elseif (!empty($idsAsignadas)) {
+    $ph = implode(',', array_fill(0, count($idsAsignadas), '?'));
+    $stmtSuc = $db->prepare(
+        "SELECT id, nombre FROM sucursales WHERE activo = 1 AND id IN ($ph) ORDER BY nombre ASC"
+    );
+    $stmtSuc->execute($idsAsignadas);
+    $sucursalesAuditoria = $stmtSuc->fetchAll();
+} else {
+    $sucursalesAuditoria = [];
+}
+
+$opcionesAuditoria = '';
+foreach ($sucursalesAuditoria as $s) {
+    $opcionesAuditoria .= '<option value="' . (int) $s['id'] . '">' . htmlspecialchars($s['nombre']) . '</option>';
+}
+
+$auditoriaDesdeDefault = date('Y-m-d', strtotime('-6 days'));
+$auditoriaHastaDefault = date('Y-m-d');
+$auditoriaMin          = $rol === 'admin' ? '' : date('Y-m-d', strtotime('-29 days'));
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -53,6 +81,16 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
 
     <!-- ── Contenedor Principal ──────────────── -->
     <main style="padding: 1.5rem; max-width: 1400px; margin: 0 auto; width: 100%;">
+
+        <!-- ── Navegación principal del panel ─────────────────── -->
+        <nav class="encargado-tabs" aria-label="Secciones del panel de sucursal">
+            <button type="button" class="btn-tab active" id="btn-vista-sucursales" onclick="Encargado.cambiarVista('sucursales')">
+                <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#store"></use></svg> Sucursales
+            </button>
+            <button type="button" class="btn-tab" id="btn-vista-auditoria" onclick="Encargado.cambiarVista('auditoria')">
+                <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#list"></use></svg> Auditoría
+            </button>
+        </nav>
 
         <!-- ═══════════════════════════════════════════════════════ -->
         <!-- VISTA 1: VISTA PRINCIPAL — TARJETAS DE SUCURSALES       -->
@@ -211,6 +249,157 @@ $rol = $_SESSION['usuario_rol'] ?? 'encargado';
                             <tr><td colspan="7" style="text-align: center; color: var(--color-text-muted); padding: 3rem;">Cargando inventario...</td></tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- VISTA 3: AUDITORÍA ACOTADA A LAS SUCURSALES A CARGO     -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <section id="vista-auditoria" style="display: none;">
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.25rem;">
+                <div>
+                    <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--color-text); margin-bottom: 0.25rem;">Auditoría de sucursales</h2>
+                    <p style="font-size: 0.9rem; color: var(--color-text-muted);">
+                        Ventas y arqueos de las cajas que tienes a cargo. Rango máximo: últimos 30 días.
+                    </p>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center;">
+                    <span style="font-size: 0.8rem; color: var(--color-text-muted); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-full); padding: 0.35rem 0.8rem;">
+                        <?= count($sucursalesAuditoria) ?> sucursal(es) a cargo
+                    </span>
+                    <button type="button" class="btn" onclick="Encargado.recargarAuditoria()" title="Actualizar auditoría">
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#refresh"></use></svg> Refrescar
+                    </button>
+                </div>
+            </div>
+
+            <div class="encargado-tabs" role="tablist" aria-label="Tipo de auditoría" style="margin-bottom: 1.25rem;">
+                <button type="button" class="btn-tab active" id="tab-aud-ventas" onclick="Encargado.cambiarTabAuditoria('ventas')">
+                    <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#list"></use></svg> Ventas
+                </button>
+                <button type="button" class="btn-tab" id="tab-aud-turnos" onclick="Encargado.cambiarTabAuditoria('turnos')">
+                    <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#clock"></use></svg> Cajas y cierres
+                </button>
+            </div>
+
+            <!-- Panel: Auditoría de ventas -->
+            <div id="panel-aud-ventas">
+                <div class="filter-bar">
+                    <div>
+                        <label for="aud-venta-sucursal" class="field-label">Sucursal</label>
+                        <select id="aud-venta-sucursal" class="field">
+                            <option value="">Todas mis sucursales</option>
+                            <?= $opcionesAuditoria ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="aud-venta-desde" class="field-label">Desde</label>
+                        <input type="date" id="aud-venta-desde" class="field" value="<?= $auditoriaDesdeDefault ?>" <?= $auditoriaMin !== '' ? 'min="' . $auditoriaMin . '"' : '' ?> max="<?= $auditoriaHastaDefault ?>">
+                    </div>
+                    <div>
+                        <label for="aud-venta-hasta" class="field-label">Hasta</label>
+                        <input type="date" id="aud-venta-hasta" class="field" value="<?= $auditoriaHastaDefault ?>" <?= $auditoriaMin !== '' ? 'min="' . $auditoriaMin . '"' : '' ?> max="<?= $auditoriaHastaDefault ?>">
+                    </div>
+                    <button type="button" class="btn btn--primary" onclick="Encargado.cargarAuditoriaVentas()">
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#search"></use></svg> Filtrar ventas
+                    </button>
+                </div>
+
+                <div id="aud-ventas-resumen" style="font-size: 0.85rem; color: var(--color-text-muted); margin: 0.75rem 0;"></div>
+
+                <div class="admin-table-wrap">
+                    <div class="admin-table-wrap__header">Ventas registradas: quién vendió qué, cuándo y dónde</div>
+                    <div class="admin-table-wrap__body">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th># Venta</th><th>Fecha / hora</th><th>Sucursal</th><th>Cajero</th><th>Detalle</th><th>Método de pago</th>
+                                    <th class="col-right">Total (Bs.)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="aud-ventas-tbody">
+                                <tr><td colspan="7" class="admin-empty-row">Elige un rango y pulsa «Filtrar ventas».</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel: Cajas abiertas y Cortes Z -->
+            <div id="panel-aud-turnos" style="display: none;">
+                <div class="filter-bar">
+                    <div>
+                        <label for="aud-turno-sucursal" class="field-label">Sucursal</label>
+                        <select id="aud-turno-sucursal" class="field">
+                            <option value="">Todas mis sucursales</option>
+                            <?= $opcionesAuditoria ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="aud-turno-estado" class="field-label">Estado</label>
+                        <select id="aud-turno-estado" class="field">
+                            <option value="">Todos los turnos</option>
+                            <option value="cerrado">Solo cerrados (corte Z)</option>
+                            <option value="abierto">Solo abiertos</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="aud-turno-desde" class="field-label">Desde</label>
+                        <input type="date" id="aud-turno-desde" class="field" value="<?= $auditoriaDesdeDefault ?>" <?= $auditoriaMin !== '' ? 'min="' . $auditoriaMin . '"' : '' ?> max="<?= $auditoriaHastaDefault ?>">
+                    </div>
+                    <div>
+                        <label for="aud-turno-hasta" class="field-label">Hasta</label>
+                        <input type="date" id="aud-turno-hasta" class="field" value="<?= $auditoriaHastaDefault ?>" <?= $auditoriaMin !== '' ? 'min="' . $auditoriaMin . '"' : '' ?> max="<?= $auditoriaHastaDefault ?>">
+                    </div>
+                    <button type="button" class="btn btn--primary" onclick="Encargado.filtrarAuditoriaTurnos()">
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#search"></use></svg> Filtrar cierres
+                    </button>
+                </div>
+
+                <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--color-text); margin: 0.5rem 0 0.6rem;">Cajas abiertas ahora</h3>
+                <div id="aud-cajas-resumen" style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.6rem;"></div>
+                <div class="admin-table-wrap">
+                    <div class="admin-table-wrap__body">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Sucursal</th><th>Cajero</th><th>Apertura</th>
+                                    <th class="col-right">Ventas del turno</th>
+                                    <th class="col-right">Egresos</th>
+                                    <th class="col-right">Efectivo esperado</th>
+                                    <th class="col-center">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="aud-cajas-abiertas-tbody">
+                                <tr><td colspan="7" class="admin-empty-row">Cargando cajas abiertas...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--color-text); margin: 1.5rem 0 0.6rem;">Cortes Z (cierres de turno)</h3>
+                <div id="aud-turnos-resumen" style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.6rem;"></div>
+                <div class="admin-table-wrap">
+                    <div class="admin-table-wrap__header">Arqueos y cierres de caja de tus sucursales</div>
+                    <div class="admin-table-wrap__body">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th># Turno</th><th>Sucursal / cajero</th><th>Apertura - cierre</th>
+                                    <th class="col-right">Fondo inicial</th>
+                                    <th class="col-right">Ventas sistema</th>
+                                    <th class="col-right">Egresos</th>
+                                    <th class="col-right">Monto físico</th>
+                                    <th class="col-center">Diferencia</th>
+                                    <th>Notas</th>
+                                </tr>
+                            </thead>
+                            <tbody id="aud-turnos-tbody">
+                                <tr><td colspan="9" class="admin-empty-row">Cargando turnos de caja...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </section>
