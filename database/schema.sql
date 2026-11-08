@@ -4,6 +4,11 @@
 -- Única Fuente de Verdad — Usuarios van en database/init_usuarios.php
 -- ======================================================================
 
+-- Este archivo está en UTF-8. Sin esto, un cliente que importe en latin1
+-- (phpMyAdmin o mysql con otro charset por defecto) guarda "Salteña" como
+-- "SalteÃ±a" (doble codificación). Si ya pasó, actualizar_bd.php lo repara.
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 CREATE DATABASE IF NOT EXISTS patuju_pos
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;

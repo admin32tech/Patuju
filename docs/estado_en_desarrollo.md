@@ -101,6 +101,7 @@ El sistema opera con total independencia por sucursal a través de las 3 vistas 
 - ✅ **Suite de pruebas endurecida:** BD aislada `patuju_pos_test` (el nombre debe terminar en `_test`), variables `PATUJU_*` respetadas por la app y la suite. Cómo correrla: ver la sección "Pruebas" del [README](../README.md).
 - ✅ **Cierre de turno supervisado:** desde el panel del encargado, cada sucursal con turno abierto muestra "Cerrar turno" (Corte X y efectivo contado → Corte Z). El encargado cierra los turnos de sus cajas y el admin los de cualquiera; queda registrado quién lo cerró. Cubre al cajero que no cerró o que fue reasignado con el turno abierto.
 - ✅ **`actualizar_bd.php` protegido:** desde la web solo lo ejecuta el admin con sesión iniciada (botón "Actualizar base de datos" en el panel de admin); sin sesión o con otro rol redirige a `login.php` sin tocar la BD. Por consola (`php actualizar_bd.php`) se permite siempre como vía de recuperación.
+- ✅ **Caracteres rotos ("SalteÃ±a", "reciÃ©n") — 2026-11-08:** los datos quedaron doblemente codificados al importar `schema.sql` con el cliente en latin1. `schema.sql` ahora empieza con `SET NAMES utf8mb4`, y el paso 9 de `actualizar_bd.php` repara los textos ya rotos en cualquier tabla. Solo toca un texto si la reparación es reversible, y avisa de los que deja sin tocar (por ejemplo, con emojis).
 
 ---
 

@@ -131,6 +131,41 @@ final class ActualizarBdTest extends TestCase
         ], $this->asignaciones());
     }
 
+    /**
+     * Paso 9: textos doblemente codificados ("SalteÃ±a") vuelven a UTF-8 correcto;
+     * los que ya están bien, o que no se pueden revertir sin perder datos, no se tocan.
+     */
+    public function testRepairsDoubleEncodedText(): void
+    {
+        // Simula un schema.sql importado en latin1: bytes UTF-8 leídos como latin1
+        $romper = fn (string $texto): string => "CONVERT(CONVERT(CAST(" . $this->db()->quote($texto) . " AS BINARY) USING latin1) USING utf8mb4)";
+        $this->db()->exec('UPDATE productos SET nombre = ' . $romper('Salteña Grande') . ', descripcion = ' . $romper('Recién horneada, con ají') . ' WHERE id = 1');
+        $this->db()->exec('UPDATE categorias SET nombre = ' . $romper('Salteñas') . ' WHERE id = 1');
+        $this->db()->exec('UPDATE sucursales SET responsable = ' . $romper('María López') . ', direccion = ' . $romper('Av. Cañoto #100') . ' WHERE id = 1');
+        // Bien escrito aunque contenga "Ã": no se toca
+        $this->db()->exec("UPDATE sucursales SET direccion = 'Rua SÃO João 12' WHERE id = 2");
+        // Roto pero con un emoji que latin1 no representa: revertirlo lo perdería, no se toca
+        $this->db()->exec('UPDATE productos SET descripcion = CONCAT(' . $romper('Salteña') . ", ' 🥟') WHERE id = 2");
+        $conEmoji = (string) $this->scalar('SELECT descripcion FROM productos WHERE id = 2');
+        $this->assertSame('SalteÃ±a', mb_substr($conEmoji, 0, 8));
+
+        $this->assertStringContainsString('Textos reparados', $this->runActualizarBd()->body);
+
+        $this->assertSame('Salteña Grande', $this->scalar('SELECT nombre FROM productos WHERE id = 1'));
+        $this->assertSame('Recién horneada, con ají', $this->scalar('SELECT descripcion FROM productos WHERE id = 1'));
+        $this->assertSame('Salteñas', $this->scalar('SELECT nombre FROM categorias WHERE id = 1'));
+        $this->assertSame('María López', $this->scalar('SELECT responsable FROM sucursales WHERE id = 1'));
+        $this->assertSame('Av. Cañoto #100', $this->scalar('SELECT direccion FROM sucursales WHERE id = 1'));
+        $this->assertSame('Rua SÃO João 12', $this->scalar('SELECT direccion FROM sucursales WHERE id = 2'));
+        $this->assertSame($conEmoji, $this->scalar('SELECT descripcion FROM productos WHERE id = 2'));
+
+        // Idempotente: una segunda pasada no cambia nada, pero avisa del texto que no pudo reparar
+        $segunda = $this->runActualizarBd()->body;
+        $this->assertStringContainsString('No hay textos con caracteres rotos para reparar', $segunda);
+        $this->assertStringContainsString('productos.descripcion (1)', $segunda);
+        $this->assertSame('Salteña Grande', $this->scalar('SELECT nombre FROM productos WHERE id = 1'));
+    }
+
     public function testSeedsAssignmentsWhenTableIsMissing(): void
     {
         $this->db()->exec('DROP TABLE usuario_sucursales');

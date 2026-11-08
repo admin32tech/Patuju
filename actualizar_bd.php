@@ -136,10 +136,79 @@ try {
         echo "<p style='color:gray;'>La tabla 'usuario_sucursales' ya existía: se respetan las asignaciones actuales ({$countUs} registros).</p>";
     }
 
+    // 9. Reparar textos doblemente codificados ("SalteÃ±a" → "Salteña", "reciÃ©n" → "recién")
+    // Pasa cuando schema.sql se importa con el cliente en latin1. Se revierte en MySQL
+    // (utf8mb4 → latin1 → bytes) y solo se guarda si esos bytes son UTF-8 válido y la
+    // conversión es reversible: un texto bien escrito que contenga "Ã", o uno con
+    // caracteres que latin1 no representa (emojis), no se toca. Idempotente.
+    echo "<p>Verificando textos con caracteres rotos (ñ, tildes)...</p>";
+    $columnasTexto = $db->query("
+        SELECT c.TABLE_NAME, c.COLUMN_NAME
+        FROM information_schema.COLUMNS c
+        JOIN information_schema.TABLES t
+          ON t.TABLE_SCHEMA = c.TABLE_SCHEMA AND t.TABLE_NAME = c.TABLE_NAME AND t.TABLE_TYPE = 'BASE TABLE'
+        WHERE c.TABLE_SCHEMA = DATABASE()
+          AND c.DATA_TYPE IN ('char', 'varchar', 'tinytext', 'text', 'mediumtext', 'longtext')
+          AND EXISTS (
+              SELECT 1 FROM information_schema.COLUMNS pk
+              WHERE pk.TABLE_SCHEMA = c.TABLE_SCHEMA AND pk.TABLE_NAME = c.TABLE_NAME
+                AND pk.COLUMN_NAME = 'id' AND pk.COLUMN_KEY = 'PRI'
+          )
+    ")->fetchAll();
+
+    $textosReparados = [];
+    $textosOmitidos  = [];
+    $db->beginTransaction();
+    foreach ($columnasTexto as $colTexto) {
+        $tabla   = '`' . str_replace('`', '``', $colTexto['TABLE_NAME']) . '`';
+        $columna = '`' . str_replace('`', '``', $colTexto['COLUMN_NAME']) . '`';
+        $bytes   = "CAST(CONVERT({$columna} USING latin1) AS BINARY)";
+        $filasRotas = $db->query("
+            SELECT id,
+                   HEX({$bytes}) AS reparado_hex,
+                   CAST(CONVERT(CONVERT({$bytes} USING latin1) USING utf8mb4) AS BINARY) = CAST({$columna} AS BINARY) AS reversible
+            FROM {$tabla}
+            WHERE {$columna} LIKE BINARY '%Ã%' OR {$columna} LIKE BINARY '%Â%'
+        ")->fetchAll();
+
+        $stmtReparar = $db->prepare("UPDATE {$tabla} SET {$columna} = ? WHERE id = ?");
+        $n = 0;
+        $omitidos = 0;
+        foreach ($filasRotas as $fila) {
+            $reparado = hex2bin($fila['reparado_hex']);
+            if (!(int) $fila['reversible'] || $reparado === false || !mb_check_encoding($reparado, 'UTF-8')) {
+                $omitidos++;
+                continue;
+            }
+            $stmtReparar->execute([$reparado, $fila['id']]);
+            $n++;
+        }
+        $nombreCol = htmlspecialchars("{$colTexto['TABLE_NAME']}.{$colTexto['COLUMN_NAME']}");
+        if ($n > 0) {
+            $textosReparados[] = "{$nombreCol} ({$n})";
+        }
+        if ($omitidos > 0) {
+            $textosOmitidos[] = "{$nombreCol} ({$omitidos})";
+        }
+    }
+    $db->commit();
+    if ($textosReparados) {
+        echo "<p style='color:green;'>Textos reparados: " . implode(', ', $textosReparados) . ".</p>";
+    } else {
+        echo "<p style='color:gray;'>No hay textos con caracteres rotos para reparar.</p>";
+    }
+    if ($textosOmitidos) {
+        echo "<p style='color:#b45309;'>Textos con 'Ã' o 'Â' que no se modificaron porque repararlos perdería datos (revísalos a mano): "
+           . implode(', ', $textosOmitidos) . ".</p>";
+    }
+
     echo "<h3>¡Actualización completada exitosamente!</h3>";
     echo "<p><a href='admin.php'>Volver al panel de admin</a></p>";
 
 } catch (Exception $e) {
+    if (isset($db) && $db->inTransaction()) {
+        $db->rollBack(); // la reparación de textos (paso 9) queda completa o sin aplicar
+    }
     echo "<h3 style='color:red;'>Error durante la actualización:</h3>";
     echo "<pre>" . $e->getMessage() . "</pre>";
 }
