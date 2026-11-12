@@ -13,13 +13,13 @@ final class AnalyticsTest extends TestCase
         $this->assertSame(401, $this->get('/ajax/analytics.php')->status);
     }
 
-    public function testRequiresAdminRole(): void
+    public function testRequiresAuthorizedRole(): void
     {
         $this->loginAs('caja_caja_central');
         $this->assertSame(403, $this->get('/ajax/analytics.php', 'caja_caja_central')->status);
 
         $this->loginAs('encargado_encargado_central');
-        $this->assertSame(403, $this->get('/ajax/analytics.php', 'encargado_encargado_central')->status);
+        $this->assertSame(200, $this->get('/ajax/analytics.php', 'encargado_encargado_central')->status);
     }
 
     public function testDashboardHasExpectedStructure(): void
@@ -98,6 +98,88 @@ final class AnalyticsTest extends TestCase
         $this->assertSame(0, (int) $data['kpis']['transacciones_hoy']);
         $this->assertCount(0, $data['metodos_pago']);
         $this->assertCount(0, $data['top_productos']);
+    }
+
+    public function testEncargadoAnalyticsOnlyIncludesAssignedBranches(): void
+    {
+        $this->loginAs('caja_caja_central');
+        $this->openShift('caja_caja_central');
+        $this->sell([['id' => 1, 'cantidad' => 2]], 100, 'caja_caja_central');
+
+        $this->loginAs('caja_caja_lujan');
+        $this->openShift('caja_caja_lujan');
+        $this->sell([['id' => 1, 'cantidad' => 1]], 100, 'caja_caja_lujan');
+
+        // Sucursal 6 no está asignada al encargado de Central.
+        $this->loginAs('caja_caja_1plan3000');
+        $this->openShift('caja_caja_1plan3000');
+        $this->sell([['id' => 1, 'cantidad' => 5]], 100, 'caja_caja_1plan3000');
+
+        $this->loginAs('encargado_encargado_central');
+        $data = $this->get('/ajax/analytics.php', 'encargado_encargado_central')->json()['data'];
+
+        $this->assertSame(21.0, (float) $data['kpis']['ventas_hoy']);
+        $this->assertSame(2, (int) $data['kpis']['transacciones_hoy']);
+        $this->assertSame(3, (int) $data['kpis']['unidades_hoy']);
+
+        $ids = array_map(static fn (array $s): int => (int) $s['id'], $data['ventas_por_sucursal']);
+        sort($ids);
+        $this->assertSame([1, 2, 3, 4, 5], $ids);
+
+        $unidadesTop = array_sum(array_map(
+            static fn (array $p): int => (int) $p['unidades_vendidas'],
+            $data['top_productos']
+        ));
+        $this->assertSame(3, $unidadesTop);
+    }
+
+    public function testEncargadoAnalyticsRejectsForeignBranch(): void
+    {
+        $this->loginAs('caja_caja_1plan3000');
+        $this->openShift('caja_caja_1plan3000');
+        $this->sell([['id' => 1, 'cantidad' => 5]], 100, 'caja_caja_1plan3000');
+
+        $this->loginAs('encargado_encargado_central');
+        foreach (['6', '0', 'abc', '-1'] as $valor) {
+            $response = $this->get('/ajax/analytics.php?sucursal_id=' . $valor, 'encargado_encargado_central');
+            $this->assertSame(403, $response->status, $valor);
+        }
+
+        $propia = $this->get('/ajax/analytics.php?sucursal_id=2', 'encargado_encargado_central');
+        $this->assertSame(200, $propia->status, $propia->body);
+        $data = $propia->json()['data'];
+        $ids = array_map(static fn (array $s): int => (int) $s['id'], $data['ventas_por_sucursal']);
+        $this->assertSame([2], $ids);
+        $this->assertSame(0.0, (float) $data['kpis']['ventas_hoy']);
+    }
+
+    public function testEncargadoCannotExportCsv(): void
+    {
+        $this->loginAs('encargado_encargado_central');
+
+        $this->assertSame(
+            403,
+            $this->get('/ajax/analytics.php?export=csv&tipo=ventas_sucursal', 'encargado_encargado_central')->status
+        );
+    }
+
+    public function testAdminCsvExportRespectsBranchFilter(): void
+    {
+        $this->loginAs('caja_caja_central');
+        $this->openShift();
+        $this->sell([['id' => 1, 'cantidad' => 2]], 30);
+
+        $this->loginAs('caja_caja_lujan');
+        $this->openShift('caja_caja_lujan');
+        $this->sell([['id' => 1, 'cantidad' => 1]], 100, 'caja_caja_lujan');
+
+        $this->loginAs('admin');
+        $response = $this->get('/ajax/analytics.php?export=csv&tipo=ventas_sucursal&sucursal_id=2', 'admin');
+
+        $this->assertSame(200, $response->status);
+        $rows = $this->csvRows($response->body);
+        $this->assertSame(['Patuju Lujan', '1', '1', '7,00'], $this->findCsvRow($rows, 'Patuju Lujan'));
+        $this->assertNull($this->findCsvRow($rows, 'Patuju Central'));
     }
 
     public function testCsvExportVentasSucursal(): void

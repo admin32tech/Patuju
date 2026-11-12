@@ -16,11 +16,10 @@ final class RolesAccessTest extends TestCase
         $this->assertSame(403, $this->get('/ajax/usuarios.php', 'caja_caja_central')->status);
     }
 
-    public function testEncargadoCannotAccessAdminEndpoints(): void
+    public function testEncargadoCannotAccessAdminOnlyEndpoints(): void
     {
         $this->loginAs('encargado_encargado_central');
 
-        $this->assertSame(403, $this->get('/ajax/analytics.php', 'encargado_encargado_central')->status);
         $this->assertSame(403, $this->get('/ajax/usuarios.php', 'encargado_encargado_central')->status);
     }
 

@@ -4,15 +4,58 @@
  * Provee datos agregados para el Dashboard de Chart.js y exportación de reportes CSV.
  *
  * GET                           → JSON completo de métricas y series para el dashboard
- * GET ?export=csv&tipo=X        → Descarga de reporte en formato CSV (compatible con Excel)
+ * GET ?sucursal_id=X            → Acota la analítica a una sucursal permitida
+ * GET ?export=csv&tipo=X        → Descarga de reporte en formato CSV (solo admin)
+ *
+ * El admin ve toda la red; el encargado, únicamente sus sucursales asignadas
+ * (principal + usuario_sucursales). Un sucursal_id ajeno responde 403.
  */
 require_once __DIR__ . '/../config/auth.php';
-verificarSesionAjax('admin');
+verificarSesionAjax();
+
+$rol = $_SESSION['usuario_rol'] ?? '';
+if (!puede('ver_analitica_sucursal')) {
+    jsonResponse(['success' => false, 'error' => 'Sin permisos para ver analítica'], 403);
+}
 
 $db = getDB();
 
+// Filtro por sucursal acotado a lo que el usuario tiene asignado.
+// - Admin sin sucursal_id: toda la red.
+// - Encargado sin sucursal_id: sus sucursales asignadas (N:M + principal).
+// - Con sucursal_id: solo esa, y 403 si no está entre las permitidas.
+$sucSolicitada = sucursalSolicitadaPermitida($_GET['sucursal_id'] ?? null);
+
+$filtroVentasSql = '1=1';
+$filtroVSql      = '1=1';
+$filtroSSql      = '1=1';
+$filtroParams    = [];
+
+if ($sucSolicitada !== null) {
+    $filtroVentasSql = 'sucursal_id = ?';
+    $filtroVSql      = 'v.sucursal_id = ?';
+    $filtroSSql      = 's.id = ?';
+    $filtroParams    = [$sucSolicitada];
+} elseif ($rol !== 'admin') {
+    $asignadas = obtenerSucursalesAsignadas();
+    if (empty($asignadas)) {
+        $filtroVentasSql = '1=0';
+        $filtroVSql      = '1=0';
+        $filtroSSql      = '1=0';
+    } else {
+        $ph = implode(',', array_fill(0, count($asignadas), '?'));
+        $filtroVentasSql = "sucursal_id IN ($ph)";
+        $filtroVSql      = "v.sucursal_id IN ($ph)";
+        $filtroSSql      = "s.id IN ($ph)";
+        $filtroParams    = $asignadas;
+    }
+}
+
 // ── MODO EXPORTACIÓN DE REPORTES (CSV) ────────────────────────────────────
 if (isset($_GET['export']) && $_GET['export'] === 'csv') {
+    if (!puede('exportar_reportes')) {
+        jsonResponse(['success' => false, 'error' => 'Sin permisos para exportar reportes'], 403);
+    }
     $tipo = $_GET['tipo'] ?? 'ventas_sucursal';
     $fechaDesde = !empty($_GET['desde']) ? $_GET['desde'] : date('Y-m-01');
     $fechaHasta = !empty($_GET['hasta']) ? $_GET['hasta'] : date('Y-m-d');
@@ -38,10 +81,11 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
             LEFT JOIN ventas v ON v.sucursal_id = s.id 
                  AND DATE(v.fecha) BETWEEN ? AND ?
             WHERE s.activo = 1 AND s.es_interna = 0
+              AND {$filtroSSql}
             GROUP BY s.id, s.nombre
             ORDER BY total_monto DESC
         ");
-        $stmt->execute([$fechaDesde, $fechaHasta]);
+        $stmt->execute(array_merge([$fechaDesde, $fechaHasta], $filtroParams));
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             fputcsv($output, [
                 $row['nombre'],
@@ -61,11 +105,12 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
             LEFT JOIN detalle_ventas dv ON dv.producto_id = p.id
             LEFT JOIN ventas v ON v.id = dv.venta_id AND DATE(v.fecha) BETWEEN ? AND ?
                  AND v.sucursal_id NOT IN (SELECT id FROM sucursales WHERE es_interna = 1)
+                 AND {$filtroVSql}
             WHERE p.activo = 1
             GROUP BY p.id, p.nombre, c.nombre, p.precio
             ORDER BY unidades_vendidas DESC
         ");
-        $stmt->execute([$fechaDesde, $fechaHasta]);
+        $stmt->execute(array_merge([$fechaDesde, $fechaHasta], $filtroParams));
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             fputcsv($output, [
                 $row['nombre'],
@@ -85,10 +130,11 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
             FROM ventas v
             JOIN sucursales s ON s.id = v.sucursal_id
             WHERE DATE(v.fecha) BETWEEN ? AND ? AND s.es_interna = 0
+              AND {$filtroVSql}
             GROUP BY DATE(v.fecha), s.id, s.nombre
             ORDER BY DATE(v.fecha) DESC, total DESC
         ");
-        $stmt->execute([$fechaDesde, $fechaHasta]);
+        $stmt->execute(array_merge([$fechaDesde, $fechaHasta], $filtroParams));
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             fputcsv($output, [
                 $row['fecha'],
@@ -108,7 +154,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 try {
     // 1. KPIs Generales de Hoy y del Mes
-    $stmtKpisHoy = $db->query("
+    $stmtKpisHoy = $db->prepare("
         SELECT 
             COALESCE(SUM(total), 0) AS ventas_hoy,
             COUNT(id) AS transacciones_hoy,
@@ -116,7 +162,9 @@ try {
         FROM ventas
         WHERE DATE(fecha) = CURDATE()
           AND sucursal_id NOT IN (SELECT id FROM sucursales WHERE es_interna = 1)
+          AND {$filtroVentasSql}
     ");
+    $stmtKpisHoy->execute($filtroParams);
     $kpisHoy = $stmtKpisHoy->fetch(PDO::FETCH_ASSOC);
 
     $ventasHoyTotal = (float) $kpisHoy['ventas_hoy'];
@@ -124,7 +172,7 @@ try {
     $unidadesHoy = (int) $kpisHoy['unidades_hoy'];
     $ticketPromedioHoy = $transaccionesHoy > 0 ? round($ventasHoyTotal / $transaccionesHoy, 2) : 0.0;
 
-    $stmtKpisMes = $db->query("
+    $stmtKpisMes = $db->prepare("
         SELECT 
             COALESCE(SUM(total), 0) AS ventas_mes,
             COUNT(id) AS transacciones_mes,
@@ -132,11 +180,13 @@ try {
         FROM ventas
         WHERE YEAR(fecha) = YEAR(CURDATE()) AND MONTH(fecha) = MONTH(CURDATE())
           AND sucursal_id NOT IN (SELECT id FROM sucursales WHERE es_interna = 1)
+          AND {$filtroVentasSql}
     ");
+    $stmtKpisMes->execute($filtroParams);
     $kpisMes = $stmtKpisMes->fetch(PDO::FETCH_ASSOC);
 
     // 2. Ventas del Día por Sucursal (Incremental y Comparativo)
-    $stmtSucursales = $db->query("
+    $stmtSucursales = $db->prepare("
         SELECT 
             s.id, s.nombre,
             COALESCE(v_hoy.unidades, 0) AS unidades_hoy,
@@ -151,15 +201,18 @@ try {
                    SUM(total) AS total_bs
             FROM ventas
             WHERE DATE(fecha) = CURDATE()
+              AND {$filtroVentasSql}
             GROUP BY sucursal_id
         ) v_hoy ON v_hoy.sucursal_id = s.id
         WHERE s.activo = 1 AND s.es_interna = 0
+          AND {$filtroSSql}
         ORDER BY unidades_hoy DESC, s.id ASC
     ");
+    $stmtSucursales->execute(array_merge($filtroParams, $filtroParams));
     $ventasPorSucursal = $stmtSucursales->fetchAll(PDO::FETCH_ASSOC);
 
     // 3. Ventas por Hora del Día (Horarios Pico Hoy)
-    $stmtHoras = $db->query("
+    $stmtHoras = $db->prepare("
         SELECT 
             HOUR(fecha) AS hora,
             COUNT(id) AS transacciones,
@@ -168,9 +221,11 @@ try {
         FROM ventas
         WHERE DATE(fecha) = CURDATE()
           AND sucursal_id NOT IN (SELECT id FROM sucursales WHERE es_interna = 1)
+          AND {$filtroVentasSql}
         GROUP BY HOUR(fecha)
         ORDER BY hora ASC
     ");
+    $stmtHoras->execute($filtroParams);
     $ventasHorasRaw = $stmtHoras->fetchAll(PDO::FETCH_ASSOC);
 
     // Normalizar de 06:00 a 20:00 para gráfico continuo
@@ -193,7 +248,7 @@ try {
     }
 
     // 4. Top 10 Productos Más Vendidos del Mes
-    $stmtTopProd = $db->query("
+    $stmtTopProd = $db->prepare("
         SELECT 
             p.id, p.nombre, p.imagen, c.nombre AS categoria,
             COALESCE(SUM(dv.cantidad), 0) AS unidades_vendidas,
@@ -205,15 +260,17 @@ try {
              AND MONTH(v.fecha) = MONTH(CURDATE()) 
              AND YEAR(v.fecha) = YEAR(CURDATE())
              AND v.sucursal_id NOT IN (SELECT id FROM sucursales WHERE es_interna = 1)
+             AND {$filtroVSql}
         WHERE p.activo = 1
         GROUP BY p.id, p.nombre, p.imagen, c.nombre
         ORDER BY unidades_vendidas DESC
         LIMIT 10
     ");
+    $stmtTopProd->execute($filtroParams);
     $topProductos = $stmtTopProd->fetchAll(PDO::FETCH_ASSOC);
 
     // 5. Tendencia de Ventas de los Últimos 30 Días
-    $stmtTendencia = $db->query("
+    $stmtTendencia = $db->prepare("
         SELECT 
             DATE(fecha) AS dia,
             COUNT(id) AS transacciones,
@@ -222,9 +279,11 @@ try {
         FROM ventas
         WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)
           AND sucursal_id NOT IN (SELECT id FROM sucursales WHERE es_interna = 1)
+          AND {$filtroVentasSql}
         GROUP BY DATE(fecha)
         ORDER BY dia ASC
     ");
+    $stmtTendencia->execute($filtroParams);
     $tendenciaRaw = $stmtTendencia->fetchAll(PDO::FETCH_ASSOC);
 
     // Mapear los 30 días continuos
@@ -247,7 +306,7 @@ try {
     }
 
     // 6. Ventas por Mes (Últimos 12 meses)
-    $stmtMeses = $db->query("
+    $stmtMeses = $db->prepare("
         SELECT 
             DATE_FORMAT(fecha, '%Y-%m') AS mes_key,
             DATE_FORMAT(fecha, '%b %Y')  AS mes_label,
@@ -257,13 +316,15 @@ try {
         FROM ventas
         WHERE fecha >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 11 MONTH)
           AND sucursal_id NOT IN (SELECT id FROM sucursales WHERE es_interna = 1)
+          AND {$filtroVentasSql}
         GROUP BY mes_key, mes_label
         ORDER BY mes_key ASC
     ");
+    $stmtMeses->execute($filtroParams);
     $ventasPorMes = $stmtMeses->fetchAll(PDO::FETCH_ASSOC);
 
     // 7. Distribución por Métodos de Pago
-    $stmtMetodos = $db->query("
+    $stmtMetodos = $db->prepare("
         SELECT 
             metodo_pago,
             COUNT(id) AS transacciones,
@@ -271,8 +332,10 @@ try {
         FROM ventas
         WHERE MONTH(fecha) = MONTH(CURDATE()) AND YEAR(fecha) = YEAR(CURDATE())
           AND sucursal_id NOT IN (SELECT id FROM sucursales WHERE es_interna = 1)
+          AND {$filtroVentasSql}
         GROUP BY metodo_pago
     ");
+    $stmtMetodos->execute($filtroParams);
     $metodosPago = $stmtMetodos->fetchAll(PDO::FETCH_ASSOC);
 
     // Estructura conforme al estándar estricto de Fase_3.md

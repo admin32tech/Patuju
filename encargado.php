@@ -35,6 +35,12 @@ foreach ($sucursalesAuditoria as $s) {
 $auditoriaDesdeDefault = date('Y-m-d', strtotime('-6 days'));
 $auditoriaHastaDefault = date('Y-m-d');
 $auditoriaMin          = $rol === 'admin' ? '' : date('Y-m-d', strtotime('-29 days'));
+
+// Cache-busting: cada cambio en el JS/CSS se sirve con una URL versionada por su fecha de modificación,
+// evitando que el navegador siga ejecutando una versión vieja del panel en caché.
+$cssStyles   = 'assets/css/styles.css?v=' . (filemtime(__DIR__ . '/assets/css/styles.css') ?: 1);
+$jsAnalytics = 'assets/js/analytics.js?v=' . (filemtime(__DIR__ . '/assets/js/analytics.js') ?: 1);
+$jsEncargado = 'assets/js/encargado.js?v=' . (filemtime(__DIR__ . '/assets/js/encargado.js') ?: 1);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -43,7 +49,7 @@ $auditoriaMin          = $rol === 'admin' ? '' : date('Y-m-d', strtotime('-29 da
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Patuju POS — Panel de Gestión de Sucursales">
     <title>Patuju POS — Panel de Sucursales (<?= htmlspecialchars($sucursalNombre) ?>)</title>
-    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="<?= $cssStyles ?>">
     <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
 </head>
 <body data-sucursal-id="<?= $sucursalId ?>" data-sucursal-nombre="<?= htmlspecialchars($sucursalNombre) ?>" data-usuario-rol="<?= htmlspecialchars($rol) ?>">
@@ -89,6 +95,9 @@ $auditoriaMin          = $rol === 'admin' ? '' : date('Y-m-d', strtotime('-29 da
             </button>
             <button type="button" class="btn-tab" id="btn-vista-auditoria" onclick="Encargado.cambiarVista('auditoria')">
                 <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#list"></use></svg> Auditoría
+            </button>
+            <button type="button" class="btn-tab" id="btn-vista-analitica" onclick="Encargado.cambiarVista('analitica')">
+                <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#trend"></use></svg> Analítica
             </button>
         </nav>
 
@@ -404,6 +413,85 @@ $auditoriaMin          = $rol === 'admin' ? '' : date('Y-m-d', strtotime('-29 da
             </div>
         </section>
 
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- VISTA 4: ANALÍTICA ACOTADA A LAS SUCURSALES A CARGO     -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <section id="vista-analitica" style="display: none;">
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.25rem;">
+                <div>
+                    <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--color-text); margin-bottom: 0.25rem;">Analítica de mis sucursales</h2>
+                    <p style="font-size: 0.9rem; color: var(--color-text-muted);">
+                        Ventas, horarios pico y productos líderes de las cajas que tienes a cargo.
+                    </p>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center;">
+                    <span style="font-size: 0.8rem; color: var(--color-text-muted); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-full); padding: 0.35rem 0.8rem;">
+                        <?= count($sucursalesAuditoria) ?> sucursal(es) a cargo
+                    </span>
+                    <button type="button" class="btn" onclick="AdminAnalytics.imprimirReporte()" title="Imprimir informe en PDF">
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#printer"></use></svg> Imprimir PDF
+                    </button>
+                </div>
+            </div>
+
+            <div id="tab-content-analytics">
+                <div class="filter-bar" style="margin-bottom: 1rem;">
+                    <div>
+                        <label for="analitica-sucursal" class="field-label">Sucursal</label>
+                        <select id="analitica-sucursal" class="field" onchange="AdminAnalytics.actualizar()">
+                            <option value="">Todas mis sucursales</option>
+                            <?= $opcionesAuditoria ?>
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn--primary" onclick="AdminAnalytics.actualizar()">
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#refresh"></use></svg> Actualizar
+                    </button>
+                </div>
+
+                <div class="analytics-topbar">
+                    <div class="analytics-topbar__status">
+                        <span id="analytics-status-badge" class="badge-status status-ok">Actualizado</span>
+                        <span class="analytics-topbar__note">Se actualiza solo cada 30 s</span>
+                    </div>
+                    <div class="analytics-topbar__actions">
+                        <button type="button" class="btn" onclick="AdminAnalytics.actualizar()" title="Forzar actualización de datos">
+                            <svg class="icon" aria-hidden="true" focusable="false"><use href="assets/img/icons.svg#refresh"></use></svg> Refrescar
+                        </button>
+                    </div>
+                </div>
+
+                <div class="kpi-grid">
+                    <div class="kpi-card"><div class="kpi-card__info"><div class="kpi-card__title">Ventas de hoy</div><div class="kpi-card__value" id="kpi-ventas-hoy">Bs. 0.00</div></div></div>
+                    <div class="kpi-card"><div class="kpi-card__info"><div class="kpi-card__title">Transacciones hoy</div><div class="kpi-card__value" id="kpi-transacciones-hoy">0</div></div></div>
+                    <div class="kpi-card"><div class="kpi-card__info"><div class="kpi-card__title">Ticket promedio</div><div class="kpi-card__value" id="kpi-ticket-promedio">Bs. 0.00</div></div></div>
+                    <div class="kpi-card"><div class="kpi-card__info"><div class="kpi-card__title">Ventas del mes</div><div class="kpi-card__value" id="kpi-ventas-mes">Bs. 0.00</div></div></div>
+                </div>
+
+                <div class="analytics-charts-grid">
+                    <div class="chart-card col-8">
+                        <div class="chart-card__header"><div class="chart-card__title">Unidades vendidas hoy por sucursal</div><span class="chart-card__note">Comportamiento incremental</span></div>
+                        <div class="chart-card__body"><canvas id="chart-sucursales"></canvas></div>
+                    </div>
+                    <div class="chart-card col-4">
+                        <div class="chart-card__header"><div class="chart-card__title">Horarios pico (hoy)</div><span class="chart-card__note">Evolución horaria en Bs.</span></div>
+                        <div class="chart-card__body"><canvas id="chart-horas"></canvas></div>
+                    </div>
+                    <div class="chart-card col-7">
+                        <div class="chart-card__header"><div class="chart-card__title">Ventas por mes (últimos 12 meses)</div><span class="chart-card__note">Total facturado en Bs.</span></div>
+                        <div class="chart-card__body chart-card__body--md"><canvas id="chart-mes"></canvas></div>
+                    </div>
+                    <div class="chart-card col-5">
+                        <div class="chart-card__header"><div class="chart-card__title">Top 10 productos del mes</div><span class="chart-card__note">Por unidades vendidas</span></div>
+                        <div class="chart-card__body"><canvas id="chart-productos"></canvas></div>
+                    </div>
+                    <div class="chart-card col-12">
+                        <div class="chart-card__header"><div class="chart-card__title">Tendencia de ventas diarias (últimos 30 días)</div><span class="chart-card__note">Total facturado en Bs.</span></div>
+                        <div class="chart-card__body chart-card__body--lg"><canvas id="chart-tendencia"></canvas></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
     </main>
 </div>
 
@@ -650,6 +738,8 @@ $auditoriaMin          = $rol === 'admin' ? '' : date('Y-m-d', strtotime('-29 da
     </div>
 </div>
 
-<script src="assets/js/encargado.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="<?= $jsAnalytics ?>"></script>
+<script src="<?= $jsEncargado ?>"></script>
 </body>
 </html>

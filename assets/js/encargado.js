@@ -23,7 +23,7 @@ const Encargado = (() => {
     let modoVistaActual = 'cards'; // 'cards' o 'tabla'
     let tabModalActivo = 'precio';  // 'precio', 'ingreso', 'historial'
     let filtroRotacionActual = 'todos'; // 'todos', 'diaria', 'lenta'
-    let vistaActual = 'sucursales'; // 'sucursales' o 'auditoria'
+    let vistaActual = 'sucursales'; // 'sucursales', 'auditoria' o 'analitica'
     let tabAuditoriaActual = 'ventas'; // 'ventas' o 'turnos'
     let detalleSucursalAbierto = false;
     let auditoriaInicializada = false;
@@ -74,21 +74,43 @@ const Encargado = (() => {
     }
 
     function cambiarVista(vista) {
-        vistaActual = vista === 'auditoria' ? 'auditoria' : 'sucursales';
+        vistaActual = vista === 'auditoria'
+            ? 'auditoria'
+            : (vista === 'analitica' ? 'analitica' : 'sucursales');
 
         const vSuc = $('#vista-sucursales');
         const vDet = $('#vista-detalle-sucursal');
         const vAud = $('#vista-auditoria');
+        const vAna = $('#vista-analitica');
         const btnSuc = $('#btn-vista-sucursales');
         const btnAud = $('#btn-vista-auditoria');
+        const btnAna = $('#btn-vista-analitica');
 
-        if (vistaActual === 'auditoria') {
+        if (vistaActual === 'analitica') {
+            detalleSucursalAbierto = false;
             if (vSuc) vSuc.style.display = 'none';
             if (vDet) vDet.style.display = 'none';
+            if (vAud) vAud.style.display = 'none';
+            if (vAna) vAna.style.display = 'block';
+            if ($('#topbar-subtitulo')) $('#topbar-subtitulo').textContent = 'Analítica';
+            marcarTabActivo(btnSuc, false);
+            marcarTabActivo(btnAud, false);
+            marcarTabActivo(btnAna, true);
+
+            if (typeof AdminAnalytics !== 'undefined') {
+                AdminAnalytics.init();
+            }
+        } else if (vistaActual === 'auditoria') {
+            detalleSucursalAbierto = false;
+            if (typeof AdminAnalytics !== 'undefined') AdminAnalytics.detener();
+            if (vSuc) vSuc.style.display = 'none';
+            if (vDet) vDet.style.display = 'none';
+            if (vAna) vAna.style.display = 'none';
             if (vAud) vAud.style.display = 'block';
             if ($('#topbar-subtitulo')) $('#topbar-subtitulo').textContent = 'Auditoría';
             marcarTabActivo(btnSuc, false);
             marcarTabActivo(btnAud, true);
+            marcarTabActivo(btnAna, false);
 
             if (!auditoriaInicializada) {
                 auditoriaInicializada = true;
@@ -99,18 +121,18 @@ const Encargado = (() => {
                 cargarAuditoriaTurnos();
             }
         } else {
+            // Vista 'sucursales': volver a la vista principal de tarjetas/resumen sin mezclar con el detalle
+            detalleSucursalAbierto = false;
+            if (typeof AdminAnalytics !== 'undefined') AdminAnalytics.detener();
             if (vAud) vAud.style.display = 'none';
-            if (detalleSucursalAbierto && sucursalSeleccionadaId) {
-                if (vSuc) vSuc.style.display = 'none';
-                if (vDet) vDet.style.display = 'block';
-                if ($('#topbar-subtitulo')) $('#topbar-subtitulo').textContent = sucursalSeleccionadaNombre;
-            } else {
-                if (vSuc) vSuc.style.display = 'block';
-                if (vDet) vDet.style.display = 'none';
-                if ($('#topbar-subtitulo')) $('#topbar-subtitulo').textContent = document.body.dataset.sucursalNombre || 'Mi Sucursal';
-            }
+            if (vAna) vAna.style.display = 'none';
+            if (vDet) vDet.style.display = 'none';
+            if (vSuc) vSuc.style.display = 'block';
+            if ($('#topbar-subtitulo')) $('#topbar-subtitulo').textContent = document.body.dataset.sucursalNombre || 'Mi Sucursal';
             marcarTabActivo(btnSuc, true);
             marcarTabActivo(btnAud, false);
+            marcarTabActivo(btnAna, false);
+            cargarResumenSucursales();
         }
 
         window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
@@ -677,16 +699,21 @@ const Encargado = (() => {
         sucursalSeleccionadaNombre = nombre;
         detalleSucursalAbierto = true;
 
-        // Ocultar vista 1 y auditoría, mostrar vista 2
+        if (typeof AdminAnalytics !== 'undefined') AdminAnalytics.detener();
+
+        // Ocultar vista tarjetas, auditoría y analítica; mostrar detalle
         const vSucursales = $('#vista-sucursales');
         const vDetalle = $('#vista-detalle-sucursal');
         const vAuditoria = $('#vista-auditoria');
+        const vAnalitica = $('#vista-analitica');
         if (vSucursales) vSucursales.style.display = 'none';
         if (vAuditoria) vAuditoria.style.display = 'none';
+        if (vAnalitica) vAnalitica.style.display = 'none';
         if (vDetalle) vDetalle.style.display = 'block';
         vistaActual = 'sucursales';
         marcarTabActivo($('#btn-vista-sucursales'), true);
         marcarTabActivo($('#btn-vista-auditoria'), false);
+        marcarTabActivo($('#btn-vista-analitica'), false);
 
         // Actualizar datos de cabecera
         if ($('#detalle-sucursal-titulo')) $('#detalle-sucursal-titulo').textContent = nombre;
@@ -715,16 +742,20 @@ const Encargado = (() => {
 
     function volverASucursales() {
         detalleSucursalAbierto = false;
+        sucursalSeleccionadaId = null;
         vistaActual = 'sucursales';
         const vSucursales = $('#vista-sucursales');
         const vDetalle = $('#vista-detalle-sucursal');
         const vAuditoria = $('#vista-auditoria');
+        const vAnalitica = $('#vista-analitica');
         if (vDetalle) vDetalle.style.display = 'none';
         if (vAuditoria) vAuditoria.style.display = 'none';
+        if (vAnalitica) vAnalitica.style.display = 'none';
         if (vSucursales) vSucursales.style.display = 'block';
         if ($('#topbar-subtitulo')) $('#topbar-subtitulo').textContent = document.body.dataset.sucursalNombre || 'Mi Sucursal';
         marcarTabActivo($('#btn-vista-sucursales'), true);
         marcarTabActivo($('#btn-vista-auditoria'), false);
+        marcarTabActivo($('#btn-vista-analitica'), false);
 
         cargarResumenSucursales();
         window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });

@@ -18,6 +18,10 @@ function opcionesSucursales(array $sucursales): string {
     }
     return $html;
 }
+// Cache-busting: versión por filemtime para evitar caché de assets antiguos
+$cssStyles   = 'assets/css/styles.css?v=' . (filemtime(__DIR__ . '/assets/css/styles.css') ?: 1);
+$jsAnalytics = 'assets/js/analytics.js?v=' . (filemtime(__DIR__ . '/assets/js/analytics.js') ?: 1);
+$jsAdmin     = 'assets/js/admin.js?v=' . (filemtime(__DIR__ . '/assets/js/admin.js') ?: 1);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -26,7 +30,7 @@ function opcionesSucursales(array $sucursales): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Patuju POS — Panel de Administración General y Auditoría Multi-Sucursal">
     <title>Patuju POS — Panel de Dirección General</title>
-    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="<?= $cssStyles ?>">
     <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
 </head>
 <body>
@@ -273,6 +277,18 @@ function opcionesSucursales(array $sucursales): string {
 
             <!-- PESTAÑA 5: ANALÍTICA -->
             <section id="tab-content-analytics" class="tab-content" style="display:none;">
+                <div class="filter-bar">
+                    <div>
+                        <label for="analitica-sucursal" class="field-label">Sucursal</label>
+                        <select id="analitica-sucursal" class="field" onchange="AdminAnalytics.actualizar()">
+                            <option value="">Todas las sucursales</option>
+                            <?= opcionesSucursales(array_filter($sucursales, fn($s) => empty($s['es_interna']))) ?>
+                        </select>
+                    </div>
+                    <span class="filter-bar__spacer"></span>
+                    <span class="analytics-topbar__note">Los KPIs y gráficos respetan la sucursal elegida.</span>
+                </div>
+
                 <div class="analytics-topbar">
                     <div class="analytics-topbar__status">
                         <span id="analytics-status-badge" class="badge-status status-ok">Actualizado</span>
@@ -544,7 +560,7 @@ function opcionesSucursales(array $sucursales): string {
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-<script src="assets/js/analytics.js"></script>
-<script src="assets/js/admin.js"></script>
+<script src="<?= $jsAnalytics ?>"></script>
+<script src="<?= $jsAdmin ?>"></script>
 </body>
 </html>

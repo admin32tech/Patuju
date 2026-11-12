@@ -207,7 +207,13 @@ const AdminAnalytics = (() => {
         mostrarEstado('actualizando');
 
         try {
-            const res = await fetch('ajax/analytics.php');
+            const params = new URLSearchParams();
+            const selectSucursal = document.getElementById('analitica-sucursal');
+            if (selectSucursal && selectSucursal.value) {
+                params.append('sucursal_id', selectSucursal.value);
+            }
+            const query = params.toString();
+            const res = await fetch('ajax/analytics.php' + (query ? '?' + query : ''));
             if (!res.ok) {
                 throw new Error(`Error HTTP: ${res.status}`);
             }
@@ -351,8 +357,10 @@ const AdminAnalytics = (() => {
         const tipo  = document.getElementById('rep-tipo')?.value  || 'ventas_sucursal';
         const desde = document.getElementById('rep-desde')?.value || '';
         const hasta = document.getElementById('rep-hasta')?.value || '';
+        const sucursal = document.getElementById('analitica-sucursal')?.value || '';
 
-        const url = `ajax/analytics.php?export=csv&tipo=${encodeURIComponent(tipo)}&desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`;
+        let url = `ajax/analytics.php?export=csv&tipo=${encodeURIComponent(tipo)}&desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`;
+        if (sucursal) url += `&sucursal_id=${encodeURIComponent(sucursal)}`;
         window.location.href = url;
         cerrarModalExportar();
     }
@@ -361,9 +369,18 @@ const AdminAnalytics = (() => {
         window.print();
     }
 
+    // ── Detener actualizaciones (al salir de la vista de analítica) ─────────
+    function detener() {
+        if (timerPolling) clearInterval(timerPolling);
+        if (timerAntiguedad) clearInterval(timerAntiguedad);
+        timerPolling = null;
+        timerAntiguedad = null;
+    }
+
     // ── API Pública ─────────────────────────────────────────────────────────
     return {
         init,
+        detener,
         actualizar: actualizarDatos,
         abrirModalExportar,
         cerrarModalExportar,

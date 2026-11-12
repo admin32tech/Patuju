@@ -253,6 +253,11 @@ function puede(string $accion, ...$args): bool {
             // obtenerSucursalesAsignadas().
             return $rol === 'encargado';
 
+        case 'ver_analitica_sucursal':
+            // Analítica acotada: mismo criterio que la auditoría; el endpoint
+            // filtra todas sus consultas por obtenerSucursalesAsignadas().
+            return $rol === 'encargado';
+
         case 'ver_sucursal':
         case 'editar_stock':
         case 'ingreso_lote':
